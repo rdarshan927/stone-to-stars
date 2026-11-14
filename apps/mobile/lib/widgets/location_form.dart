@@ -45,6 +45,27 @@ class _LocationFormState extends State<LocationForm> {
     _end = TextEditingController(text: '${widget.initialEndYear}');
   }
 
+  /// P0-4: Keep controllers in sync when the parent commits new query
+  /// parameters. Only updates a controller if the corresponding prop has
+  /// actually changed, so user-entered text is never overwritten mid-edit
+  /// unless the parent explicitly advances to a new value.
+  @override
+  void didUpdateWidget(LocationForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialLat != widget.initialLat) {
+      _lat.text = '${widget.initialLat}';
+    }
+    if (oldWidget.initialLon != widget.initialLon) {
+      _lon.text = '${widget.initialLon}';
+    }
+    if (oldWidget.initialStartYear != widget.initialStartYear) {
+      _start.text = '${widget.initialStartYear}';
+    }
+    if (oldWidget.initialEndYear != widget.initialEndYear) {
+      _end.text = '${widget.initialEndYear}';
+    }
+  }
+
   @override
   void dispose() {
     _lat.dispose();

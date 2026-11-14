@@ -168,14 +168,12 @@ class _TrendSummaryRow extends StatelessWidget {
         children: [
           _dot(AppColors.textSecondary),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: tt.bodySmall?.copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Insufficient data',
-            style: tt.bodySmall?.copyWith(color: AppColors.textSecondary),
+          Flexible(
+            child: Text(
+              '$label  Insufficient data',
+              style: tt.bodySmall?.copyWith(color: AppColors.textSecondary),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       );
@@ -191,30 +189,45 @@ class _TrendSummaryRow extends StatelessWidget {
         : AppColors.textSecondary;
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _dot(color),
         const SizedBox(width: 8),
-        SizedBox(
-          width: 100,
+        // Label: intrinsic width capped at 100 px, shrinks on very narrow screens.
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 100),
           child: Text(
             label,
             style: tt.bodySmall?.copyWith(color: AppColors.textPrimary),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
-        _pill(dir[0].toUpperCase() + dir.substring(1), dirColor, tt),
         const SizedBox(width: 6),
-        _pill(
-          sig ? 'Significant' : 'Not sig.',
-          sig ? AppColors.cyan : AppColors.textSecondary,
-          tt,
-        ),
-        if (slope != null) ...[
-          const SizedBox(width: 8),
-          Text(
-            '${slope >= 0 ? '+' : ''}${slope.toStringAsFixed(3)} ${trend.slopeUnitsPerDecade}',
-            style: tt.labelSmall?.copyWith(color: AppColors.textSecondary),
+        // Pills + slope in an Expanded Wrap so they never overflow the row.
+        Expanded(
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 2,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _pill(dir[0].toUpperCase() + dir.substring(1), dirColor, tt),
+              _pill(
+                sig ? 'Significant' : 'Not sig.',
+                sig ? AppColors.cyan : AppColors.textSecondary,
+                tt,
+              ),
+              if (slope != null)
+                Text(
+                  '${slope >= 0 ? '+' : ''}${slope.toStringAsFixed(3)} '
+                  '${trend.slopeUnitsPerDecade}',
+                  style: tt.labelSmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+            ],
           ),
-        ],
+        ),
       ],
     );
   }

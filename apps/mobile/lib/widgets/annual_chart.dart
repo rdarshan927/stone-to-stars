@@ -4,6 +4,53 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../models/climate_analysis.dart';
 
+/// Computes the two [FlSpot] endpoints of a Sen's slope trend line.
+///
+/// The intercept is anchored at the **statistical median** of [values] and the
+/// **median year** — consistent with the Theil-Sen estimator definition used by
+/// the backend:
+///
+///   intercept = median(y) − (senSlopePerDecade / 10) × median(x)
+///
+/// [years] must be in ascending order (guaranteed by the backend).
+/// [values] corresponds positionally to [years] but need not be sorted.
+///
+/// Returns `null` when inputs are empty or mismatched in length.
+///
+/// This function is package-visible so that unit tests can verify the
+/// intercept calculation without rendering a widget.
+List<FlSpot>? computeSenTrendSpots({
+  required List<int> years,
+  required List<double> values,
+  required double senSlopePerDecade,
+}) {
+  if (years.isEmpty || values.isEmpty || years.length != values.length) {
+    return null;
+  }
+
+  final slopePerYear = senSlopePerDecade / 10.0;
+
+  final n = years.length;
+
+  // Median year: years are already sorted ascending, so index-based is correct.
+  final medianYear = n.isOdd
+      ? years[n ~/ 2].toDouble()
+      : (years[n ~/ 2 - 1] + years[n ~/ 2]) / 2.0;
+
+  // Statistical median of values: sort a copy first.
+  final sortedValues = [...values]..sort();
+  final medianValue = n.isOdd
+      ? sortedValues[n ~/ 2]
+      : (sortedValues[n ~/ 2 - 1] + sortedValues[n ~/ 2]) / 2.0;
+
+  final intercept = medianValue - slopePerYear * medianYear;
+
+  return [
+    FlSpot(years.first.toDouble(), slopePerYear * years.first + intercept),
+    FlSpot(years.last.toDouble(), slopePerYear * years.last + intercept),
+  ];
+}
+
 /// Line chart of an annual climate series with an optional Sen's slope overlay.
 class AnnualChart extends StatelessWidget {
   const AnnualChart({
@@ -28,10 +75,13 @@ class AnnualChart extends StatelessWidget {
     if (series.isEmpty) {
       return _shell(
         child: Center(
-          child: Text(
-            'No data available.',
-            style: Theme.of(context).textTheme.bodySmall
-                ?.copyWith(color: AppColors.textSecondary),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'No data available.',
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: AppColors.textSecondary),
+            ),
           ),
         ),
       );
@@ -43,6 +93,22 @@ class AnnualChart extends StatelessWidget {
     final maxY = values.reduce((a, b) => a > b ? a : b);
     final yRange = (maxY - minY).abs();
     final yPad = yRange < 1 ? 0.5 : yRange * 0.12;
+
+    // P0-2: Explicitly constrain the x-axis to prevent fl_chart from generating
+    // ticks outside the data range.
+    //
+    // Guard: when there is exactly one data point minX would equal maxX, which
+    // would give fl_chart a zero-width axis and can cause assertion failures or
+    // visual artefacts.  Use a small symmetric ±0.5 year range instead.
+    final double minX;
+    final double maxX;
+    if (years.length == 1) {
+      minX = years.first.toDouble() - 0.5;
+      maxX = years.first.toDouble() + 0.5;
+    } else {
+      minX = years.first.toDouble();
+      maxX = years.last.toDouble();
+    }
 
     final spots = [
       for (var i = 0; i < series.length; i++)
@@ -67,29 +133,26 @@ class AnnualChart extends StatelessWidget {
       ),
     ];
 
-    // Add Sen's slope trend line if available.
+    // P0-1: Add Sen's slope trend line using the correct statistical median
+    // for the intercept, not the arbitrary middle list element.
     if (trend != null && trend!.hasResult && trend!.senSlopePerDecade != null) {
-      final slope = trend!.senSlopePerDecade! / 10.0; // per year
-      final n = values.length;
-      final medianYear = years[n ~/ 2].toDouble();
-      final medianValue = values[n ~/ 2];
-      final intercept = medianValue - slope * medianYear;
-
-      final trendSpots = [
-        FlSpot(years.first.toDouble(), slope * years.first + intercept),
-        FlSpot(years.last.toDouble(), slope * years.last + intercept),
-      ];
-
-      lineBarsData.add(
-        LineChartBarData(
-          spots: trendSpots,
-          isCurved: false,
-          color: AppColors.textSecondary.withAlpha(180),
-          barWidth: 1.5,
-          dashArray: [6, 4],
-          dotData: const FlDotData(show: false),
-        ),
+      final trendSpots = computeSenTrendSpots(
+        years: years,
+        values: values,
+        senSlopePerDecade: trend!.senSlopePerDecade!,
       );
+      if (trendSpots != null) {
+        lineBarsData.add(
+          LineChartBarData(
+            spots: trendSpots,
+            isCurved: false,
+            color: AppColors.textSecondary.withAlpha(180),
+            barWidth: 1.5,
+            dashArray: [6, 4],
+            dotData: const FlDotData(show: false),
+          ),
+        );
+      }
     }
 
     final leftLabels = (yRange < 2) ? '%.2f' : (yRange < 20 ? '%.1f' : '%.0f');
@@ -123,6 +186,9 @@ class AnnualChart extends StatelessWidget {
               padding: const EdgeInsets.only(right: 16, bottom: 8),
               child: LineChart(
                 LineChartData(
+                  // P0-2: Explicit x-range so ticks stay within the data.
+                  minX: minX,
+                  maxX: maxX,
                   minY: minY - yPad,
                   maxY: maxY + yPad,
                   lineBarsData: lineBarsData,
@@ -162,13 +228,21 @@ class AnnualChart extends StatelessWidget {
                         showTitles: true,
                         reservedSize: 28,
                         interval: _xInterval(years),
+                        // P0-2: Removed the years.contains() membership guard
+                        // that silently dropped labels for excluded years.
+                        // With explicit minX/maxX the chart never generates
+                        // ticks outside the data range.
                         getTitlesWidget: (val, _) {
-                          final yr = val.toInt();
-                          if (!years.contains(yr)) return const SizedBox();
+                          // Guard against floating-point ticks that differ
+                          // from an exact integer (defensive; shouldn't occur
+                          // with integer intervals and integer minX/maxX).
+                          if ((val - val.roundToDouble()).abs() > 0.01) {
+                            return const SizedBox.shrink();
+                          }
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(
-                              '$yr',
+                              '${val.toInt()}',
                               style: const TextStyle(
                                 fontSize: 10,
                                 color: AppColors.textSecondary,
@@ -182,13 +256,14 @@ class AnnualChart extends StatelessWidget {
                   lineTouchData: LineTouchData(
                     touchTooltipData: LineTouchTooltipData(
                       getTooltipColor: (_) => AppColors.surfaceHigh,
+                      // P0-3: Return null (not an empty LineTooltipItem) for
+                      // the trend-line bar so fl_chart suppresses the entry
+                      // entirely and no blank line appears in the tooltip.
                       getTooltipItems: (spots) => spots.map((s) {
-                        // Only label the data line (index 0), ignore trend line.
-                        if (s.barIndex != 0) {
-                          return LineTooltipItem('', const TextStyle());
-                        }
+                        if (s.barIndex != 0) return null;
                         return LineTooltipItem(
-                          '${s.x.toInt()}\n${s.y.toStringAsFixed(2)} $seriesUnits',
+                          '${s.x.toInt()}\n'
+                          '${s.y.toStringAsFixed(2)} $seriesUnits',
                           const TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 12,
@@ -208,6 +283,7 @@ class AnnualChart extends StatelessWidget {
 
   double _xInterval(List<int> years) {
     final span = years.last - years.first;
+    if (span <= 5) return 1; // ≤5 year query: label every year
     if (span <= 10) return 2;
     if (span <= 25) return 5;
     return 10;
