@@ -114,6 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             initialStartYear: _startYear,
             initialEndYear: _endYear,
             loading: _loading,
+            compactMode: _selectedIndex == 0,
           ),
           const SizedBox(height: AppSpacing.lg),
           _body(),
@@ -182,10 +183,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onPressed: _analyze,
           icon: const Icon(Icons.refresh, size: 18),
           label: const Text('Retry'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.blue,
-            foregroundColor: Colors.white,
-          ),
+          // Colours come from the theme (cyan fill, dark text).
         ),
       ],
     ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
 import '../models/climate_analysis.dart';
-import 'app_card.dart';
+import 'sparkline_chart.dart';
 import 'status_pill.dart';
 
 /// Width from which the two variable panels sit side by side.
@@ -30,9 +30,12 @@ String formatP(double p) => p < 0.0001 ? '< 0.0001' : p.toStringAsFixed(4);
 String _coord(double v, String pos, String neg) =>
     '${v.abs().toStringAsFixed(2)}°${v >= 0 ? pos : neg}';
 
-/// Overview screen content: hero, one trend panel per climate variable, and
-/// the NASA POWER data note. Purely presentational; all values come from
-/// [analysis].
+/// Observatory Overview screen content:
+/// 1. Editorial location & dataset header (unboxed typographic hierarchy).
+/// 2. Prominent Temperature (cyan) and Precipitation (amber) trend sections
+///    with embedded [SparklineChart]s, latest value, period mean, Sen's slope,
+///    significance, and 95% confidence intervals.
+/// 3. Visually quiet NASA POWER gridded data disclaimer.
 class OverviewCard extends StatelessWidget {
   const OverviewCard({super.key, required this.analysis});
 
@@ -51,22 +54,22 @@ class OverviewCard extends StatelessWidget {
           title: 'Annual temperature',
           noun: 'mean temperature',
           icon: Icons.thermostat,
-          trend: temp.trend,
-          excludedYears: temp.excludedYears.length,
+          accentColor: AppColors.cyan,
+          variable: temp,
         );
         final precipPanel = _TrendPanel(
           title: 'Annual precipitation',
           noun: 'total precipitation',
           icon: Icons.water_drop,
-          trend: precip.trend,
-          excludedYears: precip.excludedYears.length,
+          accentColor: AppColors.amber,
+          variable: precip,
         );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Hero(analysis: analysis, wide: wide),
-            const SizedBox(height: AppSpacing.lg),
+            _EditorialHeader(analysis: analysis, wide: wide),
+            const SizedBox(height: AppSpacing.xl),
             if (wide)
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +84,7 @@ class OverviewCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.lg),
               precipPanel,
             ],
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.xl),
             const _DataNote(),
           ],
         );
@@ -90,10 +93,10 @@ class OverviewCard extends StatelessWidget {
   }
 }
 
-// ── Hero ────────────────────────────────────────────────────────────────────
+// ── Editorial Observatory Header ────────────────────────────────────────────
 
-class _Hero extends StatelessWidget {
-  const _Hero({required this.analysis, required this.wide});
+class _EditorialHeader extends StatelessWidget {
+  const _EditorialHeader({required this.analysis, required this.wide});
 
   final ClimateAnalysis analysis;
   final bool wide;
@@ -106,13 +109,33 @@ class _Hero extends StatelessWidget {
         '${_coord(loc.latitude, 'N', 'S')}, ${_coord(loc.longitude, 'E', 'W')}';
     final period = '${per.startYear}–${per.endYear}';
 
-    final heading = Column(
+    final eyebrow = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: const BoxDecoration(
+            color: AppColors.cyan,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Flexible(
+          child: Text(
+            'STONE TO STARS · EARTH SYSTEM TREND DETECTIVE',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.overline.copyWith(color: AppColors.cyan),
+          ),
+        ),
+      ],
+    );
+
+    final headingBlock = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'STONE TO STARS · EARTH SYSTEM TREND DETECTIVE',
-          style: AppText.overline.copyWith(color: AppColors.cyan),
-        ),
+        eyebrow,
         const SizedBox(height: AppSpacing.sm),
         Semantics(
           header: true,
@@ -120,7 +143,9 @@ class _Hero extends StatelessWidget {
             title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: AppText.headline,
+            style: (wide ? AppText.display : AppText.headline).copyWith(
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -132,10 +157,13 @@ class _Hero extends StatelessWidget {
       ],
     );
 
-    final badge = _SourceBadge(dataset: analysis.dataset);
+    final datasetReadout = _DatasetReadout(dataset: analysis.dataset);
 
-    return AppCard(
-      padding: EdgeInsets.all(wide ? AppSpacing.xl : AppSpacing.lg),
+    return Container(
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+      decoration: const BoxDecoration(
+        border: Border(bottom: AppBorders.subtle),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -143,27 +171,28 @@ class _Hero extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: heading),
+                Expanded(child: headingBlock),
                 const SizedBox(width: AppSpacing.lg),
-                badge,
+                datasetReadout,
               ],
             )
           else ...[
-            heading,
+            headingBlock,
             const SizedBox(height: AppSpacing.md),
-            badge,
+            datasetReadout,
           ],
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
+            spacing: AppSpacing.lg,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              _FactChip(
+              _TelemetryMetaItem(
                 icon: Icons.date_range_outlined,
                 label: 'Period',
                 value: period,
               ),
-              _FactChip(
+              _TelemetryMetaItem(
                 icon: Icons.my_location_outlined,
                 label: 'Requested',
                 value:
@@ -171,7 +200,7 @@ class _Hero extends StatelessWidget {
                     '${loc.requestedLongitude.toStringAsFixed(4)}°',
               ),
               if (loc.elevationM != null)
-                _FactChip(
+                _TelemetryMetaItem(
                   icon: Icons.terrain_outlined,
                   label: 'Elevation',
                   value: '${loc.elevationM!.toStringAsFixed(0)} m',
@@ -184,8 +213,8 @@ class _Hero extends StatelessWidget {
   }
 }
 
-class _FactChip extends StatelessWidget {
-  const _FactChip({
+class _TelemetryMetaItem extends StatelessWidget {
+  const _TelemetryMetaItem({
     required this.icon,
     required this.label,
     required this.value,
@@ -197,64 +226,50 @@ class _FactChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
-        borderRadius: AppRadii.smAll,
-        border: const Border.fromBorderSide(AppBorders.subtle),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: AppColors.textSecondary),
-          const SizedBox(width: AppSpacing.sm),
-          Flexible(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: '$label  ', style: AppText.label),
-                  TextSpan(
-                    text: value,
-                    style: AppText.numeric.copyWith(fontSize: 13),
-                  ),
-                ],
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: AppColors.textSecondary),
+        const SizedBox(width: AppSpacing.xs),
+        Flexible(
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: '$label  ', style: AppText.label),
+                TextSpan(
+                  text: value,
+                  style: AppText.numeric.copyWith(fontSize: 13),
+                ),
+              ],
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _SourceBadge extends StatelessWidget {
-  const _SourceBadge({required this.dataset});
+class _DatasetReadout extends StatelessWidget {
+  const _DatasetReadout({required this.dataset});
 
   final Dataset dataset;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final hasSources = dataset.sources.isNotEmpty;
+    return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 320),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.cyan.withAlpha(20),
-        borderRadius: AppRadii.smAll,
-        border: Border.fromBorderSide(AppBorders.tinted(AppColors.cyan)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          Text(
+            'DATASET PROVENANCE',
+            style: AppText.overline.copyWith(fontSize: 10),
+          ),
+          const SizedBox(height: 2),
           Text(
             dataset.provider,
             maxLines: 2,
@@ -264,7 +279,7 @@ class _SourceBadge extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          if (dataset.sources.isNotEmpty)
+          if (hasSources)
             Text(
               dataset.sources.join(', '),
               maxLines: 2,
@@ -277,71 +292,107 @@ class _SourceBadge extends StatelessWidget {
   }
 }
 
-// ── Trend panel ─────────────────────────────────────────────────────────────
+// ── Variable Trend Section ──────────────────────────────────────────────────
 
 class _TrendPanel extends StatelessWidget {
   const _TrendPanel({
     required this.title,
     required this.noun,
     required this.icon,
-    required this.trend,
-    required this.excludedYears,
+    required this.accentColor,
+    required this.variable,
   });
 
   final String title;
   final String noun;
   final IconData icon;
-  final TrendResult trend;
-  final int excludedYears;
+  final Color accentColor;
+  final VariableAnalysis variable;
+
+  TrendResult get trend => variable.trend;
+  int get excludedYears => variable.excludedYears.length;
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    final isSig = trend.hasResult && (trend.significant ?? false);
+    final topBarColor = isSig ? accentColor : accentColor.withAlpha(110);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadii.lgAll,
+        border: const Border.fromBorderSide(AppBorders.subtle),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 18, color: AppColors.cyan),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text(title, style: AppText.subtitle),
+          Container(height: 3, color: topBarColor),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 18, color: accentColor),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Semantics(
+                        header: true,
+                        child: Text(title, style: AppText.subtitle),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.md),
+                if (trend.hasResult)
+                  ..._buildResultContent(context)
+                else
+                  ..._buildInsufficientContent(),
+              ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          if (trend.hasResult) ..._result(context) else _insufficient(),
         ],
       ),
     );
   }
 
-  Widget _insufficient() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Icon(
-          Icons.info_outline,
-          size: 16,
-          color: AppColors.textSecondary,
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(
-            'Insufficient data for a trend: ${trend.nObservations} of '
-            '${trend.minObservationsRequired} years with complete data '
-            'required.',
-            style: AppText.bodySmall,
+  List<Widget> _buildInsufficientContent() {
+    return [
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.info_outline,
+            size: 16,
+            color: AppColors.textSecondary,
           ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'Insufficient data for a trend: ${trend.nObservations} of '
+              '${trend.minObservationsRequired} years with complete data '
+              'required.',
+              style: AppText.bodySmall,
+            ),
+          ),
+        ],
+      ),
+      if (variable.series.isNotEmpty) ...[
+        const SizedBox(height: AppSpacing.md),
+        SparklineChart(
+          series: variable.series,
+          seriesUnits: variable.seriesUnits,
+          accentColor: accentColor,
+          trend: trend,
+          semanticLabel: '$title historical series',
         ),
       ],
-    );
+    ];
   }
 
-  List<Widget> _result(BuildContext context) {
+  List<Widget> _buildResultContent(BuildContext context) {
     final dir = trend.direction;
     final known = dir == 'increasing' || dir == 'decreasing';
     final up = dir == 'increasing';
@@ -349,9 +400,8 @@ class _TrendPanel extends StatelessWidget {
     final slope = trend.senSlopePerDecade;
 
     // Colour only confirms *significant* trends; everything else is muted.
-    final valueColor = !sig || !known
-        ? AppColors.textSecondary
-        : (up ? AppColors.cyan : AppColors.amber);
+    // Temperature uses cyan and precipitation uses amber when significant.
+    final valueColor = !sig || !known ? AppColors.textSecondary : accentColor;
 
     final stat = [
       if (trend.pValueHamedRao != null) 'p = ${formatP(trend.pValueHamedRao!)}',
@@ -373,6 +423,8 @@ class _TrendPanel extends StatelessWidget {
     }
 
     return [
+      Text("SEN'S SLOPE", style: AppText.overline.copyWith(fontSize: 10)),
+      const SizedBox(height: AppSpacing.xxs),
       Wrap(
         spacing: AppSpacing.sm,
         crossAxisAlignment: WrapCrossAlignment.end,
@@ -393,7 +445,11 @@ class _TrendPanel extends StatelessWidget {
         runSpacing: AppSpacing.sm,
         children: [
           if (known)
-            StatusPill.direction(direction: dir, significant: sig)
+            StatusPill(
+              label: up ? 'Increasing' : 'Decreasing',
+              color: sig ? accentColor : AppColors.textSecondary,
+              icon: up ? Icons.trending_up : Icons.trending_down,
+            )
           else
             const StatusPill(
               label: 'No clear direction',
@@ -404,9 +460,17 @@ class _TrendPanel extends StatelessWidget {
         ],
       ),
       const SizedBox(height: AppSpacing.md),
+      SparklineChart(
+        series: variable.series,
+        seriesUnits: variable.seriesUnits,
+        accentColor: accentColor,
+        trend: trend,
+        semanticLabel: '$title historical series',
+      ),
+      const SizedBox(height: AppSpacing.md),
       Text(sentence, style: AppText.bodySmall),
       const SizedBox(height: AppSpacing.md),
-      const Divider(),
+      const Divider(height: 1, color: AppColors.border),
       const SizedBox(height: AppSpacing.sm),
       if (trend.ci95LowPerDecade != null && trend.ci95HighPerDecade != null)
         _Metric(
@@ -452,27 +516,35 @@ class _Metric extends StatelessWidget {
   }
 }
 
-// ── Data note ───────────────────────────────────────────────────────────────
+// ── Quiet Data Disclaimer ───────────────────────────────────────────────────
 
 class _DataNote extends StatelessWidget {
   const _DataNote();
 
   @override
   Widget build(BuildContext context) {
-    return AppCard.callout(
-      accent: AppColors.amber,
+    return Container(
+      padding: const EdgeInsets.only(top: AppSpacing.md),
+      decoration: const BoxDecoration(border: Border(top: AppBorders.subtle)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline, size: 18, color: AppColors.amber),
-          const SizedBox(width: AppSpacing.md),
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.info_outline,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               'NASA POWER provides model/reanalysis-derived gridded data '
               '(0.5° latitude × 0.625° longitude). '
               'It is not weather-station data. '
               'A non-significant trend does not mean climate is stable.',
-              style: AppText.bodySmall.copyWith(color: AppColors.textPrimary),
+              style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
             ),
           ),
         ],

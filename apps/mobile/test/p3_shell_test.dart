@@ -181,7 +181,11 @@ void main() {
       for (final w in [400.0, 768.0, 1280.0]) {
         await _pump(tester, w, 900);
         expect(find.text('Location & Period'), findsOneWidget);
-        expect(find.text('Analyze'), findsOneWidget);
+        if (w < AppBreakpoints.medium) {
+          expect(find.text('Edit'), findsOneWidget);
+        } else {
+          expect(find.text('Analyze'), findsOneWidget);
+        }
       }
     });
   });

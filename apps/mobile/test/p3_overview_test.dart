@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/app/theme.dart';
 import 'package:mobile/models/climate_analysis.dart';
+import 'package:mobile/widgets/app_card.dart';
 import 'package:mobile/widgets/overview_card.dart';
+import 'package:mobile/widgets/sparkline_chart.dart';
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -59,6 +61,8 @@ const _seasonal = SeasonalTrend(
 ClimateAnalysis _analysis({
   TrendResult? temp,
   TrendResult? precip,
+  List<AnnualPoint>? tempSeries,
+  List<AnnualPoint>? precipSeries,
   double? elevation = 50,
   String provider = 'NASA POWER',
   List<String> sources = const ['MERRA2'],
@@ -70,8 +74,12 @@ ClimateAnalysis _analysis({
   int end = 2025,
   List<ExcludedYear> excluded = const [],
 }) {
-  VariableAnalysis variable(TrendResult t, String units) => VariableAnalysis(
-    series: const [AnnualPoint(2000, 1), AnnualPoint(2001, 2)],
+  VariableAnalysis variable(
+    TrendResult t,
+    String units,
+    List<AnnualPoint> series,
+  ) => VariableAnalysis(
+    series: series,
     seriesUnits: units,
     method: 'method',
     excludedYears: excluded,
@@ -106,7 +114,11 @@ ClimateAnalysis _analysis({
       baseline: 'b',
       limitations: ['l'],
     ),
-    temperature: variable(temp ?? _trend(), '°C'),
+    temperature: variable(
+      temp ?? _trend(),
+      '°C',
+      tempSeries ?? const [AnnualPoint(2000, 27.2), AnnualPoint(2001, 27.6)],
+    ),
     precipitation: variable(
       precip ??
           _trend(
@@ -118,6 +130,8 @@ ClimateAnalysis _analysis({
             ciHigh: -10,
           ),
       'mm/year',
+      precipSeries ??
+          const [AnnualPoint(2000, 1400.0), AnnualPoint(2001, 1500.0)],
     ),
   );
 }
@@ -169,7 +183,7 @@ void main() {
     });
   });
 
-  group('Overview – significant trends', () {
+  group('Overview – significant trends & SparklineChart integration', () {
     testWidgets('shows magnitude, units, direction, significance', (t) async {
       await _pump(t, _analysis());
       expect(find.text('Annual temperature'), findsOneWidget);
@@ -194,11 +208,47 @@ void main() {
       expect(t.takeException(), isNull);
     });
 
-    testWidgets('significant trends use accent colours', (t) async {
-      await _pump(t, _analysis());
-      expect(_colorOf(t, find.text('+0.320')), AppColors.cyan);
-      expect(_colorOf(t, find.text('−45.2')), AppColors.amber);
-    });
+    testWidgets(
+      'embeds SparklineChart with cyan for temperature and amber for precipitation',
+      (t) async {
+        await _pump(
+          t,
+          _analysis(
+            precip: _trend(
+              direction: 'increasing',
+              significant: true,
+              slope: 38.4,
+              units: 'mm/year per decade',
+            ),
+          ),
+        );
+
+        final sparklines = t
+            .widgetList<SparklineChart>(find.byType(SparklineChart))
+            .toList();
+        expect(sparklines, hasLength(2));
+        expect(sparklines[0].accentColor, AppColors.cyan);
+        expect(sparklines[1].accentColor, AppColors.amber);
+
+        // Both headline slopes use their variable's identity accent when significant.
+        expect(_colorOf(t, find.text('+0.320')), AppColors.cyan);
+        expect(_colorOf(t, find.text('+38.4')), AppColors.amber);
+      },
+    );
+
+    testWidgets(
+      'displays latest annual value and period mean in SparklineChart footers',
+      (t) async {
+        await _pump(t, _analysis());
+        // Temp series: (2000, 27.2), (2001, 27.6) -> Latest (2001): 27.60 °C, Period mean: 27.40 °C
+        expect(find.text('Latest (2001): '), findsNWidgets(2));
+        expect(find.text('27.60 °C'), findsOneWidget);
+        expect(find.text('27.40 °C'), findsOneWidget);
+        // Precip series: (2000, 1400.0), (2001, 1500.0) -> Latest (2001): 1500.0 mm/year, Period mean: 1450.0 mm/year
+        expect(find.text('1500.0 mm/year'), findsOneWidget);
+        expect(find.text('1450.0 mm/year'), findsOneWidget);
+      },
+    );
 
     testWidgets('supporting statistics are shown with plain labels', (t) async {
       await _pump(t, _analysis());
@@ -337,7 +387,7 @@ void main() {
     });
   });
 
-  group('Overview – hero and data note', () {
+  group('Overview – editorial header and quiet data note', () {
     testWidgets('describes grid cell location and period from the data', (
       t,
     ) async {
@@ -356,6 +406,9 @@ void main() {
       expect(find.textContaining('1990–2020'), findsWidgets);
       expect(find.textContaining('-33.8000°, -70.6000°'), findsOneWidget);
       expect(find.textContaining('Elevation'), findsOneWidget);
+      expect(find.text('DATASET PROVENANCE'), findsOneWidget);
+      // Editorial header and quiet disclaimer avoid wrapping in AppCard.
+      expect(find.byType(AppCard), findsNothing);
     });
 
     testWidgets('project identity is present but not the bare shell wordmark', (
@@ -366,18 +419,21 @@ void main() {
       expect(find.text('Stone to Stars'), findsNothing);
     });
 
-    testWidgets('NASA POWER disclaimer is preserved', (t) async {
+    testWidgets('NASA POWER disclaimer is preserved and visually quiet', (
+      t,
+    ) async {
       await _pump(t, _analysis());
-      expect(
-        find.textContaining('0.5° latitude × 0.625° longitude'),
-        findsOneWidget,
+      final disclaimerFinder = find.textContaining(
+        '0.5° latitude × 0.625° longitude',
       );
+      expect(disclaimerFinder, findsOneWidget);
       expect(find.textContaining('not weather-station data'), findsOneWidget);
       expect(
         find.textContaining('does not mean climate is stable'),
         findsOneWidget,
       );
       expect(find.textContaining('km'), findsNothing);
+      expect(_colorOf(t, disclaimerFinder), AppColors.textSecondary);
     });
   });
 

@@ -3,10 +3,21 @@ import 'package:flutter/services.dart';
 
 import '../app/theme.dart';
 
+String _formatSummaryCoord(double v, String pos, String neg) =>
+    '${v.abs().toStringAsFixed(2)}°${v >= 0 ? pos : neg}';
+
 /// Coordinate + year input controls.
 ///
 /// Shows four text fields (Latitude, Longitude, Start Year, End Year)
 /// and an Analyze button. Calls [onAnalyze] when the user submits valid values.
+///
+/// When [compactMode] is `true` (used on the Overview tab):
+/// - On phone viewports (`< AppBreakpoints.medium`), renders a compact summary
+///   line showing coordinates and analysis period with an `Edit` action that
+///   expands the full form.
+/// - On tablet and desktop viewports (`>= AppBreakpoints.medium`), renders a
+///   compact single-row horizontal form.
+/// When [compactMode] is `false` (default), renders the full two-row form.
 class LocationForm extends StatefulWidget {
   const LocationForm({
     super.key,
@@ -16,6 +27,7 @@ class LocationForm extends StatefulWidget {
     this.initialStartYear = 1981,
     this.initialEndYear = 2025,
     this.loading = false,
+    this.compactMode = false,
   });
 
   final void Function(double lat, double lon, int start, int end) onAnalyze;
@@ -24,6 +36,7 @@ class LocationForm extends StatefulWidget {
   final int initialStartYear;
   final int initialEndYear;
   final bool loading;
+  final bool compactMode;
 
   @override
   State<LocationForm> createState() => _LocationFormState();
@@ -35,6 +48,9 @@ class _LocationFormState extends State<LocationForm> {
   late final TextEditingController _lon;
   late final TextEditingController _start;
   late final TextEditingController _end;
+
+  /// Whether the phone summary bar on Overview has been expanded by the user.
+  bool _expandedOnPhone = false;
 
   @override
   void initState() {
@@ -81,12 +97,192 @@ class _LocationFormState extends State<LocationForm> {
     final lon = double.parse(_lon.text.trim());
     final start = int.parse(_start.text.trim());
     final end = int.parse(_end.text.trim());
+    if (_expandedOnPhone) {
+      setState(() => _expandedOnPhone = false);
+    }
     widget.onAnalyze(lat, lon, start, end);
   }
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = MediaQuery.sizeOf(context).width < AppBreakpoints.medium;
+
+    if (widget.compactMode && isPhone && !_expandedOnPhone) {
+      return _buildPhoneCollapsedSummary(context);
+    }
+
+    if (widget.compactMode && !isPhone) {
+      return _buildHorizontalCompactForm(context);
+    }
+
+    return _buildFullForm(
+      context,
+      showCollapseAction: widget.compactMode && isPhone && _expandedOnPhone,
+    );
+  }
+
+  Widget _buildPhoneCollapsedSummary(BuildContext context) {
+    final coordText =
+        '${_formatSummaryCoord(widget.initialLat, 'N', 'S')}, '
+        '${_formatSummaryCoord(widget.initialLon, 'E', 'W')}';
+    final periodText = '${widget.initialStartYear}–${widget.initialEndYear}';
+
     return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.place_outlined, size: 16, color: AppColors.cyan),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Location & Period',
+                  style: AppText.label.copyWith(fontSize: 11),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$coordText  ·  $periodText',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.numeric.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (widget.loading) ...[
+            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ],
+          const SizedBox(width: AppSpacing.xs),
+          TextButton.icon(
+            onPressed: () => setState(() => _expandedOnPhone = true),
+            icon: const Icon(Icons.tune, size: 16, color: AppColors.cyan),
+            label: Text(
+              'Edit',
+              style: AppText.label.copyWith(
+                color: AppColors.cyan,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHorizontalCompactForm(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Location & Period',
+              style: AppText.label.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: _field(
+                    controller: _lat,
+                    label: 'Latitude',
+                    hint: '−90 to 90',
+                    validator: _validateLat,
+                    compact: true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 3,
+                  child: _field(
+                    controller: _lon,
+                    label: 'Longitude',
+                    hint: '−180 to 180',
+                    validator: _validateLon,
+                    compact: true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: _field(
+                    controller: _start,
+                    label: 'Start Year',
+                    hint: '≥ 1981',
+                    validator: _validateStart,
+                    isInt: true,
+                    compact: true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: _field(
+                    controller: _end,
+                    label: 'End Year',
+                    hint: '≤ 2025',
+                    validator: _validateEnd,
+                    isInt: true,
+                    compact: true,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                _analyzeButton(compact: true),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFullForm(
+    BuildContext context, {
+    required bool showCollapseAction,
+  }) {
+    return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
@@ -98,15 +294,40 @@ class _LocationFormState extends State<LocationForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Location & Period',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Location & Period',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                if (showCollapseAction)
+                  TextButton.icon(
+                    onPressed: () => setState(() => _expandedOnPhone = false),
+                    icon: const Icon(
+                      Icons.expand_less,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                    label: Text('Collapse', style: AppText.label),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xxs,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 14),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: _field(
@@ -129,6 +350,7 @@ class _LocationFormState extends State<LocationForm> {
             ),
             const SizedBox(height: 10),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: _field(
@@ -152,23 +374,29 @@ class _LocationFormState extends State<LocationForm> {
               ],
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: widget.loading ? null : _submit,
-              icon: widget.loading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.search, size: 18),
-              label: Text(widget.loading ? 'Analyzing…' : 'Analyze'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
+            _analyzeButton(compact: false),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _analyzeButton({required bool compact}) {
+    return ElevatedButton.icon(
+      onPressed: widget.loading ? null : _submit,
+      icon: widget.loading
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.search, size: 18),
+      label: Text(widget.loading ? 'Analyzing…' : 'Analyze'),
+      // Colours come from the theme (cyan fill, dark text).
+      style: ElevatedButton.styleFrom(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 14 : 18,
+          vertical: 12,
         ),
       ),
     );
@@ -180,10 +408,18 @@ class _LocationFormState extends State<LocationForm> {
     required String hint,
     required String? Function(String?) validator,
     bool isInt = false,
+    bool compact = false,
   }) {
     return TextFormField(
       controller: controller,
-      decoration: InputDecoration(labelText: label, hintText: hint),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        isDense: compact,
+        contentPadding: compact
+            ? const EdgeInsets.symmetric(horizontal: 10, vertical: 11)
+            : null,
+      ),
       keyboardType: isInt
           ? TextInputType.number
           : const TextInputType.numberWithOptions(signed: true, decimal: true),
