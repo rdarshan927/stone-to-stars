@@ -177,7 +177,7 @@ void main() {
       );
       expect(tester.takeException(), isNull);
       expect(find.byType(LineChart), findsNothing);
-      expect(find.text('No data available.'), findsOneWidget);
+      expect(find.text('0 annual observations available.'), findsOneWidget);
     });
   });
 

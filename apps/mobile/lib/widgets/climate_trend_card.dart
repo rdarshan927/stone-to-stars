@@ -173,30 +173,38 @@ class _ClimateTrendCardState extends State<ClimateTrendCard> {
             const SizedBox(height: AppSpacing.xs),
             Align(
               alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                key: const ValueKey('climate_trend_details_toggle'),
-                onPressed: () => setState(() => _expanded = !_expanded),
-                style: TextButton.styleFrom(
-                  foregroundColor: widget.accentColor,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                icon: Icon(
-                  _expanded ? Icons.expand_less : Icons.expand_more,
-                  size: 18,
-                  color: widget.accentColor,
-                ),
-                label: Text(
-                  _expanded
-                      ? 'Hide statistical details'
-                      : 'Statistical details',
-                  style: AppText.label.copyWith(
-                    color: widget.accentColor,
-                    fontWeight: FontWeight.w600,
+              child: MergeSemantics(
+                child: Semantics(
+                  expanded: _expanded,
+                  child: TextButton.icon(
+                    key: const ValueKey('climate_trend_details_toggle'),
+                    onPressed: () => setState(() => _expanded = !_expanded),
+                    style: TextButton.styleFrom(
+                      foregroundColor: widget.accentColor,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
+                      minimumSize: const Size(
+                        kMinInteractiveDimension,
+                        kMinInteractiveDimension,
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.padded,
+                    ),
+                    icon: Icon(
+                      _expanded ? Icons.expand_less : Icons.expand_more,
+                      size: 18,
+                      color: widget.accentColor,
+                    ),
+                    label: Text(
+                      _expanded
+                          ? 'Hide statistical details'
+                          : 'Statistical details',
+                      style: AppText.label.copyWith(
+                        color: widget.accentColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ),

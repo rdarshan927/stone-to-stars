@@ -16,7 +16,7 @@ String _formatSummaryCoord(double v, String pos, String neg) =>
 ///   line showing coordinates and analysis period with an `Edit` action that
 ///   expands the full form.
 /// - On tablet and desktop viewports (`>= AppBreakpoints.medium`), renders a
-///   compact single-row horizontal form.
+///   compact form that wraps when available space is limited.
 /// When [compactMode] is `false` (default), renders the full two-row form.
 class LocationForm extends StatefulWidget {
   const LocationForm({
@@ -131,8 +131,8 @@ class _LocationFormState extends State<LocationForm> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        borderRadius: AppRadii.lgAll,
+        border: const Border.fromBorderSide(AppBorders.subtle),
       ),
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -188,8 +188,11 @@ class _LocationFormState extends State<LocationForm> {
                 horizontal: AppSpacing.sm,
                 vertical: AppSpacing.xs,
               ),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              minimumSize: const Size(
+                kMinInteractiveDimension,
+                kMinInteractiveDimension,
+              ),
+              tapTargetSize: MaterialTapTargetSize.padded,
             ),
           ),
         ],
@@ -202,10 +205,13 @@ class _LocationFormState extends State<LocationForm> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        borderRadius: AppRadii.lgAll,
+        border: const Border.fromBorderSide(AppBorders.subtle),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
       child: Form(
         key: _formKey,
         child: Column(
@@ -219,58 +225,7 @@ class _LocationFormState extends State<LocationForm> {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: _field(
-                    controller: _lat,
-                    label: 'Latitude',
-                    hint: '−90 to 90',
-                    validator: _validateLat,
-                    compact: true,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 3,
-                  child: _field(
-                    controller: _lon,
-                    label: 'Longitude',
-                    hint: '−180 to 180',
-                    validator: _validateLon,
-                    compact: true,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: _field(
-                    controller: _start,
-                    label: 'Start Year',
-                    hint: '≥ 1981',
-                    validator: _validateStart,
-                    isInt: true,
-                    compact: true,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: _field(
-                    controller: _end,
-                    label: 'End Year',
-                    hint: '≤ 2025',
-                    validator: _validateEnd,
-                    isInt: true,
-                    compact: true,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                _analyzeButton(compact: true),
-              ],
-            ),
+            _fieldLayout(compact: true, includeAnalyze: true),
           ],
         ),
       ),
@@ -285,10 +240,10 @@ class _LocationFormState extends State<LocationForm> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        borderRadius: AppRadii.lgAll,
+        border: const Border.fromBorderSide(AppBorders.subtle),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Form(
         key: _formKey,
         child: Column(
@@ -319,60 +274,17 @@ class _LocationFormState extends State<LocationForm> {
                         horizontal: AppSpacing.sm,
                         vertical: AppSpacing.xxs,
                       ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      minimumSize: const Size(
+                        kMinInteractiveDimension,
+                        kMinInteractiveDimension,
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.padded,
                     ),
                   ),
               ],
             ),
             const SizedBox(height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _field(
-                    controller: _lat,
-                    label: 'Latitude',
-                    hint: '−90 to 90',
-                    validator: _validateLat,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _field(
-                    controller: _lon,
-                    label: 'Longitude',
-                    hint: '−180 to 180',
-                    validator: _validateLon,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _field(
-                    controller: _start,
-                    label: 'Start Year',
-                    hint: '≥ 1981',
-                    validator: _validateStart,
-                    isInt: true,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _field(
-                    controller: _end,
-                    label: 'End Year',
-                    hint: '≤ 2025',
-                    validator: _validateEnd,
-                    isInt: true,
-                  ),
-                ),
-              ],
-            ),
+            _fieldLayout(compact: false, includeAnalyze: false),
             const SizedBox(height: 16),
             _analyzeButton(compact: false),
           ],
@@ -380,6 +292,74 @@ class _LocationFormState extends State<LocationForm> {
       ),
     );
   }
+
+  Widget _fieldLayout({
+    required bool compact,
+    required bool includeAnalyze,
+  }) => LayoutBuilder(
+    builder: (context, constraints) {
+      final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+      final fields = [
+        _field(
+          controller: _lat,
+          label: 'Latitude',
+          hint: '−90 to 90',
+          validator: _validateLat,
+          compact: compact,
+        ),
+        _field(
+          controller: _lon,
+          label: 'Longitude',
+          hint: '−180 to 180',
+          validator: _validateLon,
+          compact: compact,
+        ),
+        _field(
+          controller: _start,
+          label: 'Start Year',
+          hint: '≥ 1981',
+          validator: _validateStart,
+          isInt: true,
+          compact: compact,
+        ),
+        _field(
+          controller: _end,
+          label: 'End Year',
+          hint: '≤ 2025',
+          validator: _validateEnd,
+          isInt: true,
+          compact: compact,
+        ),
+      ];
+      if (compact && constraints.maxWidth >= 520 * scale) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < fields.length; i++) ...[
+              if (i > 0) const SizedBox(width: AppSpacing.sm),
+              Expanded(flex: i < 2 ? 3 : 2, child: fields[i]),
+            ],
+            const SizedBox(width: AppSpacing.sm + AppSpacing.xxs),
+            _analyzeButton(compact: true),
+          ],
+        );
+      }
+      final gap = compact ? AppSpacing.sm : AppSpacing.sm + AppSpacing.xxs;
+      final minimumFieldWidth = (compact ? 140 : 120) * scale;
+      final columns = constraints.maxWidth >= minimumFieldWidth * 2 + gap
+          ? 2
+          : 1;
+      final fieldWidth = (constraints.maxWidth - gap * (columns - 1)) / columns;
+      return Wrap(
+        spacing: gap,
+        runSpacing: gap,
+        children: [
+          for (final field in fields) SizedBox(width: fieldWidth, child: field),
+          if (includeAnalyze) _analyzeButton(compact: true),
+        ],
+      );
+    },
+  );
 
   Widget _analyzeButton({required bool compact}) {
     return ElevatedButton.icon(

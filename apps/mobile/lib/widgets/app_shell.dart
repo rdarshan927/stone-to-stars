@@ -56,7 +56,7 @@ ShellSize shellSizeFor(double width) {
 /// - compact  (< 600):   brand header on top, bottom [NavigationBar].
 /// - medium   (600–999): slim [NavigationRail] with the brand mark.
 /// - expanded (≥ 1000):  extended [NavigationRail] with mark + wordmark.
-class AppShell extends StatelessWidget {
+class AppShell extends StatefulWidget {
   const AppShell({
     super.key,
     required this.selectedIndex,
@@ -69,6 +69,14 @@ class AppShell extends StatelessWidget {
 
   /// Page content (placed in a scroll view with responsive padding).
   final Widget child;
+
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  // Reparent content across the phone/rail transition without recreating forms.
+  final _contentKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -98,8 +106,8 @@ class AppShell extends StatelessWidget {
       bottomNavigationBar: DecoratedBox(
         decoration: const BoxDecoration(border: Border(top: AppBorders.subtle)),
         child: NavigationBar(
-          selectedIndex: selectedIndex,
-          onDestinationSelected: onDestinationSelected,
+          selectedIndex: widget.selectedIndex,
+          onDestinationSelected: widget.onDestinationSelected,
           destinations: [
             for (final d in kShellDestinations)
               NavigationDestination(
@@ -126,8 +134,9 @@ class AppShell extends StatelessWidget {
               border: Border(right: AppBorders.subtle),
             ),
             child: NavigationRail(
-              selectedIndex: selectedIndex,
-              onDestinationSelected: onDestinationSelected,
+              scrollable: true,
+              selectedIndex: widget.selectedIndex,
+              onDestinationSelected: widget.onDestinationSelected,
               extended: extended,
               minExtendedWidth: 232,
               minWidth: 84,
@@ -178,7 +187,10 @@ class AppShell extends StatelessWidget {
             maxWidth: AppBreakpoints.contentMaxWidth,
           ),
           // Fill the available width, capped at the content max width.
-          child: SizedBox(width: double.infinity, child: child),
+          child: SizedBox(
+            width: double.infinity,
+            child: KeyedSubtree(key: _contentKey, child: widget.child),
+          ),
         ),
       ),
     );

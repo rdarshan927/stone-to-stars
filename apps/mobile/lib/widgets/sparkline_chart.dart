@@ -403,7 +403,9 @@ class _LegendItem extends StatelessWidget {
       children: [
         swatch,
         const SizedBox(width: AppSpacing.xs),
-        Text(label, style: AppText.label.copyWith(fontSize: 11)),
+        Flexible(
+          child: Text(label, style: AppText.label.copyWith(fontSize: 11)),
+        ),
       ],
     );
   }
@@ -496,20 +498,16 @@ class _StatPair extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text('$label: ', style: AppText.label),
-        Flexible(
-          child: Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.numeric.copyWith(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: valueColor,
-            ),
+        Text(
+          value,
+          style: AppText.numeric.copyWith(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: valueColor,
           ),
         ),
       ],

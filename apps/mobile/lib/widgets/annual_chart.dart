@@ -87,13 +87,10 @@ class AnnualChart extends StatelessWidget {
             Text(seriesUnits, style: AppText.overline),
             const SizedBox(height: AppSpacing.md),
             const StatusPill(
-              label: 'No annual observations',
+              label: '0 annual observations available.',
               color: AppColors.textSecondary,
               icon: Icons.info_outline,
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Text('No data available.', style: AppText.bodySmall),
-            Text('0 annual observations available.', style: AppText.bodySmall),
           ],
         ),
       );
@@ -130,8 +127,12 @@ class AnnualChart extends StatelessWidget {
     final int latestYear = years.last;
 
     final spots = [
-      for (var i = 0; i < series.length; i++)
+      for (var i = 0; i < series.length; i++) ...[
+        // A drawing break only: the original years/values still define the
+        // statistical trend endpoints and every observation retains its value.
+        if (i > 0 && years[i] - years[i - 1] > 1) FlSpot.nullSpot,
         FlSpot(years[i].toDouble(), values[i]),
+      ],
     ];
 
     final lineBarsData = <LineChartBarData>[
@@ -192,122 +193,235 @@ class AnnualChart extends StatelessWidget {
 
     final leftLabels = (yRange < 2) ? '%.2f' : (yRange < 20 ? '%.1f' : '%.0f');
 
-    return _shell(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-            child: Text(title, style: AppText.subtitle),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
-            child: Text(
-              seriesUnits,
-              style: AppText.overline.copyWith(color: AppColors.textSecondary),
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 220,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16, bottom: 8),
-              child: LineChart(
-                LineChartData(
-                  // P0-2: Explicit x-range so ticks stay within the data.
-                  minX: minX,
-                  maxX: maxX,
-                  minY: minY - yPad,
-                  maxY: maxY + yPad,
-                  lineBarsData: lineBarsData,
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) =>
-                        FlLine(color: AppColors.border, strokeWidth: 0.5),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(10) / 10;
+        final plotWidth = (constraints.maxWidth - 52 * scale - AppSpacing.lg)
+            .clamp(1.0, double.infinity);
+        final baseInterval = _xInterval(years);
+        final widthInterval = ((maxX - minX) * 40 * scale / plotWidth)
+            .ceilToDouble();
+        final labelInterval = widthInterval > baseInterval
+            ? widthInterval
+            : baseInterval;
+        final hasTrendLine = lineBarsData.length > 1;
+        final significance = trend?.significant;
+        final significanceNote = trend?.hasResult != true
+            ? ''
+            : switch (significance) {
+                null => 'Statistical significance unavailable.',
+                true => 'Statistically significant trend.',
+                false => 'Non-significant result; inconclusive, not evidence of climate stability.',
+              };
+        final summary =
+            '$title. ${series.length} annual observations from '
+            '${years.first} to ${years.last}. Latest (${years.last}): '
+            '${values.last.toStringAsFixed(2)} $seriesUnits. '
+            '${hasTrendLine ? "Dashed line: Sen’s slope. " : ""}'
+            '$significanceNote';
+
+        return _shell(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md + AppSpacing.xxs,
+                  AppSpacing.lg,
+                  0,
+                ),
+                child: Semantics(
+                  header: true,
+                  child: Text(title, style: AppText.subtitle),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.xxs,
+                  AppSpacing.lg,
+                  0,
+                ),
+                child: Text(
+                  seriesUnits,
+                  style: AppText.overline.copyWith(
+                    color: AppColors.textSecondary,
                   ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 52,
-                        getTitlesWidget: (val, _) => Text(
-                          leftLabels == '%.0f'
-                              ? val.toStringAsFixed(0)
-                              : leftLabels == '%.1f'
-                              ? val.toStringAsFixed(1)
-                              : val.toStringAsFixed(2),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textSecondary,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Wrap(
+                  spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    _legendItem('Observed annual', seriesColor),
+                    if (hasTrendLine)
+                      _legendItem(
+                        "Sen's slope",
+                        lineBarsData.last.color!,
+                        dashed: true,
+                      ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 220 + 28 * (scale - 1),
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    right: AppSpacing.lg,
+                    bottom: AppSpacing.sm,
+                  ),
+                  child: Semantics(
+                    container: true,
+                    label: summary,
+                    child: LineChart(
+                      LineChartData(
+                        // A trend reference may extend beyond the observed range.
+                        // Keep its drawing inside the plot without altering bounds.
+                        clipData: const FlClipData.vertical(),
+                        // P0-2: Explicit x-range so ticks stay within the data.
+                        minX: minX,
+                        maxX: maxX,
+                        minY: minY - yPad,
+                        maxY: maxY + yPad,
+                        lineBarsData: lineBarsData,
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          getDrawingHorizontalLine: (_) =>
+                              FlLine(color: AppColors.border, strokeWidth: 0.5),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 52 * scale,
+                              minIncluded: false,
+                              maxIncluded: false,
+                              getTitlesWidget: (val, _) => Text(
+                                leftLabels == '%.0f'
+                                    ? val.toStringAsFixed(0)
+                                    : leftLabels == '%.1f'
+                                    ? val.toStringAsFixed(1)
+                                    : val.toStringAsFixed(2),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 28 * scale,
+                              interval: labelInterval,
+                              // P0-2: Removed the years.contains() membership guard
+                              // that silently dropped labels for excluded years.
+                              // With explicit minX/maxX the chart never generates
+                              // ticks outside the data range.
+                              getTitlesWidget: (val, meta) {
+                                // Guard against floating-point ticks that differ
+                                // from an exact integer (defensive; shouldn't occur
+                                // with integer intervals and integer minX/maxX).
+                                if ((val - val.roundToDouble()).abs() > 0.01) {
+                                  return const SizedBox.shrink();
+                                }
+                                // Keep both endpoint labels, leaving room beside
+                                // them when the final tick interval is partial.
+                                if (val > minX &&
+                                    val < maxX &&
+                                    ((val - minX) * plotWidth / (maxX - minX) <
+                                            40 * scale ||
+                                        (maxX - val) *
+                                                plotWidth /
+                                                (maxX - minX) <
+                                            40 * scale)) {
+                                  return const SizedBox.shrink();
+                                }
+                                return SideTitleWidget(
+                                  meta: meta,
+                                  space: AppSpacing.xs + AppSpacing.xxs,
+                                  fitInside:
+                                      SideTitleFitInsideData.fromTitleMeta(
+                                        meta,
+                                      ),
+                                  child: Text(
+                                    '${val.toInt()}',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        lineTouchData: LineTouchData(
+                          touchTooltipData: LineTouchTooltipData(
+                            getTooltipColor: (_) => AppColors.surfaceHigh,
+                            fitInsideHorizontally: true,
+                            fitInsideVertically: true,
+                            // P0-3: Return null (not an empty LineTooltipItem) for
+                            // the trend-line bar so fl_chart suppresses the entry
+                            // entirely and no blank line appears in the tooltip.
+                            getTooltipItems: (spots) => spots.map((s) {
+                              if (s.barIndex != 0) return null;
+                              return LineTooltipItem(
+                                '${s.x.toInt()}\n'
+                                '${s.y.toStringAsFixed(2)} $seriesUnits',
+                                const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 12,
+                                ),
+                              );
+                            }).toList(),
                           ),
                         ),
                       ),
                     ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 28,
-                        interval: _xInterval(years),
-                        // P0-2: Removed the years.contains() membership guard
-                        // that silently dropped labels for excluded years.
-                        // With explicit minX/maxX the chart never generates
-                        // ticks outside the data range.
-                        getTitlesWidget: (val, _) {
-                          // Guard against floating-point ticks that differ
-                          // from an exact integer (defensive; shouldn't occur
-                          // with integer intervals and integer minX/maxX).
-                          if ((val - val.roundToDouble()).abs() > 0.01) {
-                            return const SizedBox.shrink();
-                          }
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              '${val.toInt()}',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  lineTouchData: LineTouchData(
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipColor: (_) => AppColors.surfaceHigh,
-                      // P0-3: Return null (not an empty LineTooltipItem) for
-                      // the trend-line bar so fl_chart suppresses the entry
-                      // entirely and no blank line appears in the tooltip.
-                      getTooltipItems: (spots) => spots.map((s) {
-                        if (s.barIndex != 0) return null;
-                        return LineTooltipItem(
-                          '${s.x.toInt()}\n'
-                          '${s.y.toStringAsFixed(2)} $seriesUnits',
-                          const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 12,
-                          ),
-                        );
-                      }).toList(),
-                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
+
+  Widget _legendItem(String label, Color color, {bool dashed = false}) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      SizedBox(
+        width: AppSpacing.lg,
+        child: Row(
+          children: [
+            Expanded(child: Container(height: 2, color: color)),
+            if (dashed) ...[
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(child: Container(height: 2, color: color)),
+            ],
+          ],
+        ),
+      ),
+      const SizedBox(width: AppSpacing.xs),
+      Flexible(child: Text(label, style: AppText.label)),
+    ],
+  );
 
   double _xInterval(List<int> years) {
     final span = years.last - years.first;

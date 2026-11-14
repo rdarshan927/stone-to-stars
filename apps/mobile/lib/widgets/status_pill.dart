@@ -85,7 +85,6 @@ class StatusPill extends StatelessWidget {
             Flexible(
               child: Text(
                 label,
-                overflow: TextOverflow.ellipsis,
                 style: AppText.label.copyWith(
                   color: color,
                   fontWeight: FontWeight.w600,
