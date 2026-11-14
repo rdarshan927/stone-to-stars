@@ -313,6 +313,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           title: 'Annual Mean Temperature',
           trend: t.trend,
         ),
+        _methodNote(t.method),
         const SizedBox(height: 16),
         TrendCard(title: 'Annual Temperature Trend', trend: t.trend),
         const SizedBox(height: 16),
@@ -336,6 +337,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           title: 'Annual Precipitation Total',
           trend: p.trend,
         ),
+        _methodNote(p.method),
         const SizedBox(height: 16),
         TrendCard(title: 'Annual Precipitation Trend', trend: p.trend),
         const SizedBox(height: 16),
@@ -347,6 +349,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     );
   }
+
+  /// Small note beneath a chart describing its annual aggregation method.
+  /// Uses the `method` string provided directly by the backend — no paraphrasing.
+  Widget _methodNote(String method) => Padding(
+    padding: const EdgeInsets.fromLTRB(4, 6, 4, 0),
+    child: Text(
+      method,
+      style: Theme.of(context).textTheme.labelSmall
+          ?.copyWith(color: AppColors.textSecondary),
+    ),
+  );
 
   Widget _methodologySection(ClimateAnalysis d) =>
       MethodologyPanel(methodology: d.methodology);
@@ -377,10 +390,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ?.copyWith(color: AppColors.textSecondary),
             )
           else ...[
-            if (s.direction != null)
+            // Only show a direction pill when the direction is a confirmed
+            // monotonic trend ('increasing' or 'decreasing').  'none' means
+            // no trend direction was detected, so no pill is shown.
+            // Colour reflects significance: use the accent colour only when
+            // the trend IS statistically significant.
+            if (s.direction == 'increasing' || s.direction == 'decreasing')
               _pill(
                 s.direction![0].toUpperCase() + s.direction!.substring(1),
-                s.direction == 'increasing' ? AppColors.cyan : AppColors.orange,
+                (s.significant ?? false)
+                    ? (s.direction == 'increasing'
+                          ? AppColors.cyan
+                          : AppColors.orange)
+                    : AppColors.textSecondary,
               ),
             const SizedBox(height: 8),
             if (s.senSlopePerDecade != null)

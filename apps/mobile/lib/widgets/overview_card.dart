@@ -133,9 +133,9 @@ class OverviewCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'NASA POWER data is model-derived and grid-based '
-                    '(~0.5° resolution, ≈55 km). It represents a grid '
-                    'cell, not a station or exact point. '
+                    'NASA POWER provides model/reanalysis-derived gridded data '
+                    '(0.5° latitude × 0.625° longitude). '
+                    'It is not weather-station data. '
                     'A non-significant trend does not mean climate is stable.',
                     style: tt.bodySmall?.copyWith(color: AppColors.orange),
                   ),

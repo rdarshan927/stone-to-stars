@@ -212,14 +212,19 @@ class _LocationFormState extends State<LocationForm> {
     final n = int.tryParse(v?.trim() ?? '');
     if (n == null) return 'Enter a year';
     if (n < 1981) return '≥ 1981';
+    // No upper-bound on start alone. _validateEnd checks that
+    // the end year is later than the start year.
     return null;
   }
 
   String? _validateEnd(String? v) {
     final n = int.tryParse(v?.trim() ?? '');
     if (n == null) return 'Enter a year';
-    final start = int.tryParse(_start.text.trim()) ?? 1981;
-    if (n <= start) return '> start year';
+    // Upper bound: NASA POWER data runs through 2025.
+    if (n > 2025) return '≤ 2025';
+    final start = int.tryParse(_start.text.trim());
+    // start must be strictly less than end.
+    if (start != null && n <= start) return '> start year';
     return null;
   }
 }
