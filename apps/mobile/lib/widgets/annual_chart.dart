@@ -79,8 +79,7 @@ class AnnualChart extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             child: Text(
               'No data available.',
-              style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: AppColors.textSecondary),
+              style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
             ),
           ),
         ),
@@ -110,6 +109,13 @@ class AnnualChart extends StatelessWidget {
       maxX = years.last.toDouble();
     }
 
+    // Significance-aware fill opacity: brighter when trend is confirmed.
+    final bool isTrendSignificant = trend?.significant == true;
+    final int fillAlpha = isTrendSignificant ? 35 : 18;
+
+    // Latest-point highlight: the last year in the ascending series.
+    final int latestYear = years.last;
+
     final spots = [
       for (var i = 0; i < series.length; i++)
         FlSpot(years[i].toDouble(), values[i]),
@@ -123,18 +129,30 @@ class AnnualChart extends StatelessWidget {
         barWidth: 1.8,
         dotData: FlDotData(
           show: true,
-          getDotPainter: (p0, p1, p2, p3) => FlDotCirclePainter(
-            radius: 2.5,
-            color: seriesColor,
-            strokeWidth: 0,
-          ),
+          getDotPainter: (spot, percent, barData, index) {
+            final isLatest = spot.x.toInt() == latestYear;
+            return FlDotCirclePainter(
+              radius: isLatest ? 4.5 : 2.5,
+              color: isLatest ? seriesColor : seriesColor.withAlpha(200),
+              strokeWidth: isLatest ? 1.5 : 0,
+              strokeColor: isLatest ? AppColors.background : Colors.transparent,
+            );
+          },
         ),
-        belowBarData: BarAreaData(show: true, color: seriesColor.withAlpha(25)),
+        belowBarData: BarAreaData(
+          show: true,
+          color: seriesColor.withAlpha(fillAlpha),
+        ),
       ),
     ];
 
     // P0-1: Add Sen's slope trend line using the correct statistical median
     // for the intercept, not the arbitrary middle list element.
+    //
+    // Significance-aware styling:
+    //   significant   → seriesColor, full line weight, dashed — clearly visible.
+    //   not significant → textSecondary muted, thinner — present but subordinate.
+    // This matches the visual convention established in SparklineChart.
     if (trend != null && trend!.hasResult && trend!.senSlopePerDecade != null) {
       final trendSpots = computeSenTrendSpots(
         years: years,
@@ -142,12 +160,16 @@ class AnnualChart extends StatelessWidget {
         senSlopePerDecade: trend!.senSlopePerDecade!,
       );
       if (trendSpots != null) {
+        final Color trendLineColor = isTrendSignificant
+            ? seriesColor
+            : AppColors.textSecondary.withAlpha(140);
+        final double trendLineWidth = isTrendSignificant ? 1.5 : 1.0;
         lineBarsData.add(
           LineChartBarData(
             spots: trendSpots,
             isCurved: false,
-            color: AppColors.textSecondary.withAlpha(180),
-            barWidth: 1.5,
+            color: trendLineColor,
+            barWidth: trendLineWidth,
             dashArray: [6, 4],
             dotData: const FlDotData(show: false),
           ),
@@ -163,20 +185,13 @@ class AnnualChart extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: Text(title, style: AppText.subtitle),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
             child: Text(
               seriesUnits,
-              style: Theme.of(context).textTheme.labelSmall
-                  ?.copyWith(color: AppColors.textSecondary),
+              style: AppText.overline.copyWith(color: AppColors.textSecondary),
             ),
           ),
           const SizedBox(height: 8),
@@ -293,8 +308,8 @@ class AnnualChart extends StatelessWidget {
     width: double.infinity,
     decoration: BoxDecoration(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: AppColors.border),
+      borderRadius: AppRadii.lgAll,
+      border: Border.fromBorderSide(AppBorders.subtle),
     ),
     child: child,
   );

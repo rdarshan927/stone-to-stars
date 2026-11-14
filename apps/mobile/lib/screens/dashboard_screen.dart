@@ -5,10 +5,12 @@ import '../models/climate_analysis.dart';
 import '../services/climate_api_service.dart';
 import '../widgets/annual_chart.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/climate_trend_card.dart';
+import '../widgets/excluded_years_panel.dart';
+import '../widgets/seasonal_trend_card.dart';
 import '../widgets/location_form.dart';
 import '../widgets/methodology_panel.dart';
 import '../widgets/overview_card.dart';
-import '../widgets/trend_card.dart';
 
 /// The main dashboard screen. Accepts an optional [ClimateApiService] so that
 /// tests can inject a mock without making real HTTP calls.
@@ -202,58 +204,88 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _overviewSection(ClimateAnalysis d) => OverviewCard(analysis: d);
 
-  Widget _temperatureSection(ClimateAnalysis d) {
-    final t = d.temperature;
-    return Column(
-      children: [
-        AnnualChart(
-          series: t.series,
-          seriesUnits: t.seriesUnits,
-          seriesColor: AppColors.cyan,
-          title: 'Annual Mean Temperature',
-          trend: t.trend,
-        ),
-        _methodNote(t.method),
-        const SizedBox(height: 16),
-        TrendCard(title: 'Annual Temperature Trend', trend: t.trend),
-        const SizedBox(height: 16),
-        _seasonalSummary('Seasonal Temperature Trend', t.seasonal),
-        if (t.excludedYears.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          _excludedYearsCard(t.excludedYears),
-        ],
-      ],
-    );
-  }
+  Widget _temperatureSection(ClimateAnalysis d) => _climateSection(
+    d.temperature,
+    variableName: 'Temperature',
+    chartTitle: 'Annual Mean Temperature',
+    accentColor: AppColors.cyan,
+  );
 
-  Widget _precipitationSection(ClimateAnalysis d) {
-    final p = d.precipitation;
-    return Column(
-      children: [
-        AnnualChart(
-          series: p.series,
-          seriesUnits: p.seriesUnits,
-          seriesColor: AppColors.orange,
-          title: 'Annual Precipitation Total',
-          trend: p.trend,
-        ),
-        _methodNote(p.method),
-        const SizedBox(height: 16),
-        TrendCard(title: 'Annual Precipitation Trend', trend: p.trend),
-        const SizedBox(height: 16),
-        _seasonalSummary('Seasonal Precipitation Trend', p.seasonal),
-        if (p.excludedYears.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          _excludedYearsCard(p.excludedYears),
-        ],
+  Widget _precipitationSection(ClimateAnalysis d) => _climateSection(
+    d.precipitation,
+    variableName: 'Precipitation',
+    chartTitle: 'Annual Precipitation Total',
+    accentColor: AppColors.amber,
+  );
+
+  Widget _climateSection(
+    VariableAnalysis variable, {
+    required String variableName,
+    required String chartTitle,
+    required Color accentColor,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      // Keep the chart full-width even when the detail cards share a row.
+      AnnualChart(
+        series: variable.series,
+        seriesUnits: variable.seriesUnits,
+        seriesColor: accentColor,
+        title: chartTitle,
+        trend: variable.trend,
+      ),
+      _methodNote(variable.method),
+      const SizedBox(height: AppSpacing.lg),
+      LayoutBuilder(
+        builder: (context, constraints) {
+          // Account for the shell's rail and padding as well as screen size.
+          final twoColumns =
+              MediaQuery.sizeOf(context).width >= AppBreakpoints.expanded &&
+              constraints.maxWidth >= AppBreakpoints.medium;
+          final cardWidth = twoColumns
+              ? (constraints.maxWidth - AppSpacing.lg) / 2
+              : constraints.maxWidth;
+          // Stable children preserve expanded details when the window resizes.
+          return Wrap(
+            spacing: AppSpacing.lg,
+            runSpacing: AppSpacing.lg,
+            children: [
+              SizedBox(
+                width: cardWidth,
+                child: ClimateTrendCard(
+                  title: 'Annual $variableName Trend',
+                  trend: variable.trend,
+                  accentColor: accentColor,
+                ),
+              ),
+              SizedBox(
+                width: cardWidth,
+                child: SeasonalTrendCard(
+                  title: 'Seasonal $variableName Trend',
+                  trend: variable.seasonal,
+                  accentColor: accentColor,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+      if (variable.excludedYears.isNotEmpty) ...[
+        const SizedBox(height: AppSpacing.lg),
+        ExcludedYearsPanel(excludedYears: variable.excludedYears),
       ],
-    );
-  }
+    ],
+  );
 
   /// Small note beneath a chart describing its annual aggregation method.
   /// Uses the `method` string provided directly by the backend — no paraphrasing.
   Widget _methodNote(String method) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 6, 4, 0),
+    padding: const EdgeInsets.fromLTRB(
+      AppSpacing.xs,
+      AppSpacing.xs + AppSpacing.xxs,
+      AppSpacing.xs,
+      0,
+    ),
     child: Text(
       method,
       style: Theme.of(context).textTheme.labelSmall
@@ -263,127 +295,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _methodologySection(ClimateAnalysis d) =>
       MethodologyPanel(methodology: d.methodology);
-
-  Widget _seasonalSummary(String title, SeasonalTrend s) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 10),
-          if (!s.hasResult)
-            Text(
-              'Insufficient data for seasonal trend analysis.',
-              style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: AppColors.textSecondary),
-            )
-          else ...[
-            // Only show a direction pill when the direction is a confirmed
-            // monotonic trend ('increasing' or 'decreasing').  'none' means
-            // no trend direction was detected, so no pill is shown.
-            // Colour reflects significance: use the accent colour only when
-            // the trend IS statistically significant.
-            if (s.direction == 'increasing' || s.direction == 'decreasing')
-              _pill(
-                s.direction![0].toUpperCase() + s.direction!.substring(1),
-                (s.significant ?? false)
-                    ? (s.direction == 'increasing'
-                          ? AppColors.cyan
-                          : AppColors.orange)
-                    : AppColors.textSecondary,
-              ),
-            const SizedBox(height: 8),
-            if (s.senSlopePerDecade != null)
-              Text(
-                'Sen\'s slope: ${s.senSlopePerDecade!.toStringAsFixed(4)} ${s.slopeUnitsPerDecade}',
-                style: Theme.of(context).textTheme.bodySmall
-                    ?.copyWith(color: AppColors.textSecondary),
-              ),
-            if (s.pValue != null)
-              Text(
-                'p-value: ${s.pValue!.toStringAsFixed(4)} — '
-                '${(s.significant ?? false) ? 'Significant' : 'Not significant'}',
-                style: Theme.of(context).textTheme.bodySmall
-                    ?.copyWith(color: AppColors.textSecondary),
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _excludedYearsCard(List<ExcludedYear> excluded) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Excluded Years (incomplete data)',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: excluded
-                .map(
-                  (e) => Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.danger.withAlpha(25),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.danger.withAlpha(80)),
-                    ),
-                    child: Text(
-                      '${e.year} (${e.validMonths}/12)',
-                      style: Theme.of(context).textTheme.labelSmall
-                          ?.copyWith(color: AppColors.danger),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _pill(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withAlpha(30),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withAlpha(120)),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color),
-      ),
-    );
-  }
 }

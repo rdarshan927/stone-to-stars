@@ -2,30 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
 import '../models/climate_analysis.dart';
+import '../utils/climate_format.dart';
 import 'sparkline_chart.dart';
 import 'status_pill.dart';
 
+// formatSlope and formatP are provided by climate_format.dart.
+// Re-export so code that previously imported them from this file keeps working.
+// export must appear before any declarations.
+export '../utils/climate_format.dart' show formatSlope, formatP;
+
 /// Width from which the two variable panels sit side by side.
 const double kOverviewTwoColumnWidth = 720;
-
-/// Formats a Sen's slope for display: signed, typographic minus, with
-/// precision scaled to magnitude so the value stays short.
-String formatSlope(double v) {
-  final a = v.abs();
-  final digits = a >= 100
-      ? 0
-      : a >= 10
-      ? 1
-      : a >= 1
-      ? 2
-      : 3;
-  final s = a.toStringAsFixed(digits);
-  if (double.parse(s) == 0) return s; // avoid "+0.000" / "−0.000"
-  return '${v < 0 ? '−' : '+'}$s';
-}
-
-/// Formats a p-value with fixed precision, flooring very small values.
-String formatP(double p) => p < 0.0001 ? '< 0.0001' : p.toStringAsFixed(4);
 
 String _coord(double v, String pos, String neg) =>
     '${v.abs().toStringAsFixed(2)}°${v >= 0 ? pos : neg}';
