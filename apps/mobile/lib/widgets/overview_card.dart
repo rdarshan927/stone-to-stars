@@ -2,9 +2,37 @@ import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
 import '../models/climate_analysis.dart';
-import 'stat_tile.dart';
+import 'app_card.dart';
+import 'status_pill.dart';
 
-/// Summary card shown at the top of the Overview section.
+/// Width from which the two variable panels sit side by side.
+const double kOverviewTwoColumnWidth = 720;
+
+/// Formats a Sen's slope for display: signed, typographic minus, with
+/// precision scaled to magnitude so the value stays short.
+String formatSlope(double v) {
+  final a = v.abs();
+  final digits = a >= 100
+      ? 0
+      : a >= 10
+      ? 1
+      : a >= 1
+      ? 2
+      : 3;
+  final s = a.toStringAsFixed(digits);
+  if (double.parse(s) == 0) return s; // avoid "+0.000" / "−0.000"
+  return '${v < 0 ? '−' : '+'}$s';
+}
+
+/// Formats a p-value with fixed precision, flooring very small values.
+String formatP(double p) => p < 0.0001 ? '< 0.0001' : p.toStringAsFixed(4);
+
+String _coord(double v, String pos, String neg) =>
+    '${v.abs().toStringAsFixed(2)}°${v >= 0 ? pos : neg}';
+
+/// Overview screen content: hero, one trend panel per climate variable, and
+/// the NASA POWER data note. Purely presentational; all values come from
+/// [analysis].
 class OverviewCard extends StatelessWidget {
   const OverviewCard({super.key, required this.analysis});
 
@@ -12,135 +40,191 @@ class OverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tt = Theme.of(context).textTheme;
-    final loc = analysis.location;
-    final ds = analysis.dataset;
-    final per = analysis.period;
-    final tTrend = analysis.temperature.trend;
-    final pTrend = analysis.precipitation.trend;
+    final temp = analysis.temperature;
+    final precip = analysis.precipitation;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      padding: const EdgeInsets.all(20),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= kOverviewTwoColumnWidth;
+
+        final tempPanel = _TrendPanel(
+          title: 'Annual temperature',
+          noun: 'mean temperature',
+          icon: Icons.thermostat,
+          trend: temp.trend,
+          excludedYears: temp.excludedYears.length,
+        );
+        final precipPanel = _TrendPanel(
+          title: 'Annual precipitation',
+          noun: 'total precipitation',
+          icon: Icons.water_drop,
+          trend: precip.trend,
+          excludedYears: precip.excludedYears.length,
+        );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Hero(analysis: analysis, wide: wide),
+            const SizedBox(height: AppSpacing.lg),
+            if (wide)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: tempPanel),
+                  const SizedBox(width: AppSpacing.lg),
+                  Expanded(child: precipPanel),
+                ],
+              )
+            else ...[
+              tempPanel,
+              const SizedBox(height: AppSpacing.lg),
+              precipPanel,
+            ],
+            const SizedBox(height: AppSpacing.lg),
+            const _DataNote(),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ── Hero ────────────────────────────────────────────────────────────────────
+
+class _Hero extends StatelessWidget {
+  const _Hero({required this.analysis, required this.wide});
+
+  final ClimateAnalysis analysis;
+  final bool wide;
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = analysis.location;
+    final per = analysis.period;
+    final title =
+        '${_coord(loc.latitude, 'N', 'S')}, ${_coord(loc.longitude, 'E', 'W')}';
+    final period = '${per.startYear}–${per.endYear}';
+
+    final heading = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'STONE TO STARS · EARTH SYSTEM TREND DETECTIVE',
+          style: AppText.overline.copyWith(color: AppColors.cyan),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Semantics(
+          header: true,
+          child: Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.headline,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Annual temperature and precipitation trends for $period at the '
+          'NASA POWER cell nearest your requested point.',
+          style: AppText.bodySmall,
+        ),
+      ],
+    );
+
+    final badge = _SourceBadge(dataset: analysis.dataset);
+
+    return AppCard(
+      padding: EdgeInsets.all(wide ? AppSpacing.xl : AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Stone to Stars',
-                      style: tt.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.blue,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Earth System Trend Detective',
-                      style: tt.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _SourceBadge(sources: ds.sources),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Divider(color: AppColors.border, height: 1),
-          const SizedBox(height: 16),
-
-          // Location info
-          Text(
-            'Location',
-            style: tt.labelMedium?.copyWith(
-              color: AppColors.textSecondary,
-              letterSpacing: 0.8,
-            ),
-          ),
-          const SizedBox(height: 8),
-          StatTile(
-            label: 'Requested',
-            value:
-                '${loc.requestedLatitude.toStringAsFixed(4)}°, '
-                '${loc.requestedLongitude.toStringAsFixed(4)}°',
-          ),
-          StatTile(
-            label: 'Grid cell',
-            value:
-                '${loc.latitude.toStringAsFixed(4)}°, '
-                '${loc.longitude.toStringAsFixed(4)}°',
-          ),
-          if (loc.elevationM != null)
-            StatTile(
-              label: 'Elevation',
-              value: '${loc.elevationM!.toStringAsFixed(0)} m',
-            ),
-          StatTile(label: 'Period', value: '${per.startYear}–${per.endYear}'),
-
-          const SizedBox(height: 16),
-          const Divider(color: AppColors.border, height: 1),
-          const SizedBox(height: 16),
-
-          // Quick trend summary
-          Text(
-            'Trend Summary',
-            style: tt.labelMedium?.copyWith(
-              color: AppColors.textSecondary,
-              letterSpacing: 0.8,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _TrendSummaryRow(
-            label: 'Temperature',
-            trend: tTrend,
-            color: AppColors.cyan,
-          ),
-          const SizedBox(height: 6),
-          _TrendSummaryRow(
-            label: 'Precipitation',
-            trend: pTrend,
-            color: AppColors.orange,
-          ),
-
-          const SizedBox(height: 14),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.orange.withAlpha(20),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.orange.withAlpha(80)),
-            ),
-            padding: const EdgeInsets.all(10),
-            child: Row(
+          if (wide)
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.warning_amber_rounded,
-                  size: 16,
-                  color: AppColors.orange,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'NASA POWER provides model/reanalysis-derived gridded data '
-                    '(0.5° latitude × 0.625° longitude). '
-                    'It is not weather-station data. '
-                    'A non-significant trend does not mean climate is stable.',
-                    style: tt.bodySmall?.copyWith(color: AppColors.orange),
-                  ),
-                ),
+                Expanded(child: heading),
+                const SizedBox(width: AppSpacing.lg),
+                badge,
               ],
+            )
+          else ...[
+            heading,
+            const SizedBox(height: AppSpacing.md),
+            badge,
+          ],
+          const SizedBox(height: AppSpacing.lg),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              _FactChip(
+                icon: Icons.date_range_outlined,
+                label: 'Period',
+                value: period,
+              ),
+              _FactChip(
+                icon: Icons.my_location_outlined,
+                label: 'Requested',
+                value:
+                    '${loc.requestedLatitude.toStringAsFixed(4)}°, '
+                    '${loc.requestedLongitude.toStringAsFixed(4)}°',
+              ),
+              if (loc.elevationM != null)
+                _FactChip(
+                  icon: Icons.terrain_outlined,
+                  label: 'Elevation',
+                  value: '${loc.elevationM!.toStringAsFixed(0)} m',
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FactChip extends StatelessWidget {
+  const _FactChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceHigh,
+        borderRadius: AppRadii.smAll,
+        border: const Border.fromBorderSide(AppBorders.subtle),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: '$label  ', style: AppText.label),
+                  TextSpan(
+                    text: value,
+                    style: AppText.numeric.copyWith(fontSize: 13),
+                  ),
+                ],
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -149,133 +233,248 @@ class OverviewCard extends StatelessWidget {
   }
 }
 
-class _TrendSummaryRow extends StatelessWidget {
-  const _TrendSummaryRow({
-    required this.label,
-    required this.trend,
-    required this.color,
-  });
+class _SourceBadge extends StatelessWidget {
+  const _SourceBadge({required this.dataset});
 
-  final String label;
-  final TrendResult trend;
-  final Color color;
+  final Dataset dataset;
 
   @override
   Widget build(BuildContext context) {
-    final tt = Theme.of(context).textTheme;
-    if (!trend.hasResult) {
-      return Row(
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 320),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.cyan.withAlpha(20),
+        borderRadius: AppRadii.smAll,
+        border: Border.fromBorderSide(AppBorders.tinted(AppColors.cyan)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _dot(AppColors.textSecondary),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              '$label  Insufficient data',
-              style: tt.bodySmall?.copyWith(color: AppColors.textSecondary),
-              overflow: TextOverflow.ellipsis,
+          Text(
+            dataset.provider,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.label.copyWith(
+              color: AppColors.cyan,
+              fontWeight: FontWeight.w700,
             ),
           ),
+          if (dataset.sources.isNotEmpty)
+            Text(
+              dataset.sources.join(', '),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.label,
+            ),
         ],
-      );
-    }
+      ),
+    );
+  }
+}
 
-    final dir = trend.direction ?? 'none';
-    final sig = trend.significant ?? false;
-    final slope = trend.senSlopePerDecade;
-    final dirColor = dir == 'increasing'
-        ? AppColors.cyan
-        : dir == 'decreasing'
-        ? AppColors.orange
-        : AppColors.textSecondary;
+// ── Trend panel ─────────────────────────────────────────────────────────────
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        _dot(color),
-        const SizedBox(width: 8),
-        // Label: intrinsic width capped at 100 px, shrinks on very narrow screens.
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 100),
-          child: Text(
-            label,
-            style: tt.bodySmall?.copyWith(color: AppColors.textPrimary),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        const SizedBox(width: 6),
-        // Pills + slope in an Expanded Wrap so they never overflow the row.
-        Expanded(
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 2,
-            crossAxisAlignment: WrapCrossAlignment.center,
+class _TrendPanel extends StatelessWidget {
+  const _TrendPanel({
+    required this.title,
+    required this.noun,
+    required this.icon,
+    required this.trend,
+    required this.excludedYears,
+  });
+
+  final String title;
+  final String noun;
+  final IconData icon;
+  final TrendResult trend;
+  final int excludedYears;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              _pill(dir[0].toUpperCase() + dir.substring(1), dirColor, tt),
-              _pill(
-                sig ? 'Significant' : 'Not sig.',
-                sig ? AppColors.cyan : AppColors.textSecondary,
-                tt,
-              ),
-              if (slope != null)
-                Text(
-                  '${slope >= 0 ? '+' : ''}${slope.toStringAsFixed(3)} '
-                  '${trend.slopeUnitsPerDecade}',
-                  style: tt.labelSmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+              Icon(icon, size: 18, color: AppColors.cyan),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text(title, style: AppText.subtitle),
                 ),
+              ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (trend.hasResult) ..._result(context) else _insufficient(),
+        ],
+      ),
+    );
+  }
+
+  Widget _insufficient() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.info_outline,
+          size: 16,
+          color: AppColors.textSecondary,
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            'Insufficient data for a trend: ${trend.nObservations} of '
+            '${trend.minObservationsRequired} years with complete data '
+            'required.',
+            style: AppText.bodySmall,
           ),
         ),
       ],
     );
   }
 
-  Widget _dot(Color c) => Container(
-    width: 8,
-    height: 8,
-    decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-  );
+  List<Widget> _result(BuildContext context) {
+    final dir = trend.direction;
+    final known = dir == 'increasing' || dir == 'decreasing';
+    final up = dir == 'increasing';
+    final sig = trend.significant ?? false;
+    final slope = trend.senSlopePerDecade;
 
-  Widget _pill(String text, Color c, TextTheme tt) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-    decoration: BoxDecoration(
-      color: c.withAlpha(25),
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Text(text, style: tt.labelSmall?.copyWith(color: c)),
-  );
+    // Colour only confirms *significant* trends; everything else is muted.
+    final valueColor = !sig || !known
+        ? AppColors.textSecondary
+        : (up ? AppColors.cyan : AppColors.amber);
+
+    final stat = [
+      if (trend.pValueHamedRao != null) 'p = ${formatP(trend.pValueHamedRao!)}',
+      'α = ${trend.alpha}',
+    ].join(', ');
+
+    final String sentence;
+    if (sig) {
+      sentence = known
+          ? 'A statistically significant ${up ? 'increase' : 'decrease'} in '
+                'annual $noun ($stat).'
+          : 'A statistically significant trend in annual $noun ($stat).';
+    } else {
+      sentence = known
+          ? 'The slope points ${up ? 'upward' : 'downward'}, but it is not '
+                'statistically significant ($stat). This is inconclusive, '
+                'not evidence of stability.'
+          : 'No clear trend direction was detected ($stat).';
+    }
+
+    return [
+      Wrap(
+        spacing: AppSpacing.sm,
+        crossAxisAlignment: WrapCrossAlignment.end,
+        children: [
+          Text(
+            slope == null ? '—' : formatSlope(slope),
+            style: AppText.numericLarge.copyWith(color: valueColor),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 3),
+            child: Text(trend.slopeUnitsPerDecade, style: AppText.bodySmall),
+          ),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.sm),
+      Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: [
+          if (known)
+            StatusPill.direction(direction: dir, significant: sig)
+          else
+            const StatusPill(
+              label: 'No clear direction',
+              color: AppColors.textSecondary,
+              icon: Icons.horizontal_rule,
+            ),
+          StatusPill.significance(significant: sig),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.md),
+      Text(sentence, style: AppText.bodySmall),
+      const SizedBox(height: AppSpacing.md),
+      const Divider(),
+      const SizedBox(height: AppSpacing.sm),
+      if (trend.ci95LowPerDecade != null && trend.ci95HighPerDecade != null)
+        _Metric(
+          label: '95% confidence range',
+          value:
+              '${formatSlope(trend.ci95LowPerDecade!)} to '
+              '${formatSlope(trend.ci95HighPerDecade!)} '
+              '${trend.slopeUnitsPerDecade}',
+        ),
+      _Metric(label: 'Years analysed', value: '${trend.nObservations}'),
+      if (excludedYears > 0)
+        _Metric(label: 'Years excluded (incomplete)', value: '$excludedYears'),
+    ];
+  }
 }
 
-class _SourceBadge extends StatelessWidget {
-  const _SourceBadge({required this.sources});
+class _Metric extends StatelessWidget {
+  const _Metric({required this.label, required this.value});
 
-  final List<String> sources;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: AppColors.blue.withAlpha(30),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.blue.withAlpha(100)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'NASA POWER',
-            style: Theme.of(context).textTheme.labelSmall
-                ?.copyWith(color: AppColors.blue, fontWeight: FontWeight.bold),
-          ),
-          if (sources.isNotEmpty)
-            Text(
-              sources.join(', '),
-              style: Theme.of(context).textTheme.labelSmall
-                  ?.copyWith(color: AppColors.textSecondary, fontSize: 10),
+          Expanded(flex: 4, child: Text(label, style: AppText.bodySmall)),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            flex: 5,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: AppText.numeric.copyWith(fontSize: 13),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Data note ───────────────────────────────────────────────────────────────
+
+class _DataNote extends StatelessWidget {
+  const _DataNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard.callout(
+      accent: AppColors.amber,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, size: 18, color: AppColors.amber),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              'NASA POWER provides model/reanalysis-derived gridded data '
+              '(0.5° latitude × 0.625° longitude). '
+              'It is not weather-station data. '
+              'A non-significant trend does not mean climate is stable.',
+              style: AppText.bodySmall.copyWith(color: AppColors.textPrimary),
+            ),
+          ),
         ],
       ),
     );
