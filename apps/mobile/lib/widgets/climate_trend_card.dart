@@ -55,6 +55,12 @@ class _ClimateTrendCardState extends State<ClimateTrendCard> {
           children: [
             _buildHeader(),
             const SizedBox(height: AppSpacing.md),
+            const StatusPill(
+              label: 'Insufficient data',
+              color: AppColors.textSecondary,
+              icon: Icons.info_outline,
+            ),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -85,7 +91,7 @@ class _ClimateTrendCardState extends State<ClimateTrendCard> {
     final dir = _trend.direction;
     final known = dir == 'increasing' || dir == 'decreasing';
     final up = dir == 'increasing';
-    final sig = _trend.significant ?? false;
+    final sig = _trend.significant == true;
     final slope = _trend.senSlopePerDecade;
 
     // Accent colour highlights confirmed (significant) monotonic trends;
@@ -136,16 +142,26 @@ class _ClimateTrendCardState extends State<ClimateTrendCard> {
                   color: AppColors.textSecondary,
                   icon: Icons.horizontal_rule,
                 ),
-              StatusPill.significance(significant: sig),
+              if (_trend.significant != null)
+                StatusPill.significance(significant: sig)
+              else
+                const StatusPill(
+                  label: 'Significance unavailable',
+                  color: AppColors.textSecondary,
+                  icon: Icons.info_outline,
+                ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           Text(_trend.interpretation, style: AppText.bodySmall),
-          if (!sig && !_mentionsInconclusive(_trend.interpretation)) ...[
+          if (!sig) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'A non-significant result is inconclusive and does not imply '
-              'no change or a stable climate.',
+              _trend.significant == false
+                  ? 'A non-significant result is inconclusive and does not imply '
+                        'no change or a stable climate.'
+                  : 'Statistical significance is unavailable; this result '
+                        'does not establish a confirmed annual trend.',
               style: AppText.label.copyWith(color: AppColors.textSecondary),
             ),
           ],
@@ -242,12 +258,5 @@ class _ClimateTrendCardState extends State<ClimateTrendCard> {
         ),
       ],
     );
-  }
-
-  bool _mentionsInconclusive(String text) {
-    final lower = text.toLowerCase();
-    return lower.contains('inconclusive') ||
-        lower.contains('stable') ||
-        lower.contains('no change');
   }
 }

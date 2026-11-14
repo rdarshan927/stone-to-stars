@@ -124,7 +124,8 @@ void main() {
       find.text('Insufficient data for seasonal trend analysis.'),
       findsOneWidget,
     );
-    expect(find.byType(StatusPill), findsNothing);
+    expect(find.text('Insufficient data'), findsOneWidget);
+    expect(find.text('Significant'), findsNothing);
     expect(find.text('p-value'), findsNothing);
   });
 

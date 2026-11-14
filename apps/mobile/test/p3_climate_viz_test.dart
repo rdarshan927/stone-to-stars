@@ -41,7 +41,7 @@ const List<AnnualPoint> _series5 = [
 ];
 
 TrendResult _trend({
-  bool significant = true,
+  bool? significant = true,
   double? slopePerDecade = 0.25,
   String status = 'ok',
   String direction = 'increasing',
@@ -65,10 +65,10 @@ TrendResult _trend({
   direction: direction,
   significant: status == 'ok' ? significant : null,
   pValueOriginal: status == 'ok'
-      ? (pOriginal ?? (significant ? 0.004 : 0.42))
+      ? (pOriginal ?? (significant == true ? 0.004 : 0.42))
       : null,
   pValueHamedRao: status == 'ok'
-      ? (pHamedRao ?? (significant ? 0.008 : 0.48))
+      ? (pHamedRao ?? (significant == true ? 0.008 : 0.48))
       : null,
   hamedRaoLag: hamedRaoLag,
   kendallTau: status == 'ok' ? kendallTau : null,
@@ -83,7 +83,7 @@ TrendResult _trend({
   ci95Note: ci95Note,
   interpretation:
       interpretation ??
-      (significant ? 'Significant trend.' : 'No significant trend.'),
+      (significant == true ? 'Significant trend.' : 'No significant trend.'),
 );
 
 Widget _wrap(Widget child, {double width = 400}) {
@@ -696,7 +696,7 @@ void main() {
     );
 
     testWidgets(
-      'non-significant trend does not duplicate caveat when backend already mentions stability',
+      'non-significant trend retains clarification even when backend mentions stability',
       (tester) async {
         const backendNote =
             'No statistically significant monotonic trend detected at alpha=0.05. '
@@ -718,7 +718,7 @@ void main() {
         expect(find.text(backendNote), findsOneWidget);
         expect(
           find.textContaining('inconclusive and does not imply no change'),
-          findsNothing,
+          findsOneWidget,
         );
       },
     );
@@ -772,6 +772,76 @@ void main() {
         findsNothing,
       );
     });
+  });
+
+  group('ClimateTrendCard – scientific state clarity', () {
+    for (final note in [
+      'The climate is stable.',
+      'There is no change.',
+      'An inconclusive result.',
+    ]) {
+      testWidgets('backend text cannot suppress clarification: $note', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _wrap(
+            ClimateTrendCard(
+              title: 'Annual trend',
+              trend: _trend(significant: false, interpretation: note),
+              accentColor: AppColors.amber,
+            ),
+          ),
+        );
+        expect(find.text(note), findsOneWidget);
+        expect(
+          find.textContaining('inconclusive and does not imply no change'),
+          findsOneWidget,
+        );
+        expect(find.text('Not significant'), findsOneWidget);
+      });
+    }
+    for (final significance in <bool?>[null, false, true]) {
+      testWidgets(
+        'API significance $significance controls presentation, regardless of interpretation or p-value',
+        (tester) async {
+          const note = 'Backend interpretation preserved verbatim.';
+          await tester.pumpWidget(
+            _wrap(
+              ClimateTrendCard(
+                title: 'Annual trend',
+                trend: _trend(
+                  significant: significance,
+                  interpretation: note,
+                  pHamedRao: 0.00001,
+                ),
+                accentColor: AppColors.amber,
+              ),
+            ),
+          );
+          expect(find.text(note), findsOneWidget);
+          expect(
+            find.text('Significance unavailable'),
+            significance == null ? findsOneWidget : findsNothing,
+          );
+          expect(
+            find.text('Not significant'),
+            significance == false ? findsOneWidget : findsNothing,
+          );
+          expect(
+            find.text('Significant'),
+            significance == true ? findsOneWidget : findsNothing,
+          );
+          expect(
+            find.textContaining('inconclusive and does not imply no change'),
+            significance == false ? findsOneWidget : findsNothing,
+          );
+          expect(
+            tester.widget<Text>(find.text('+0.250')).style?.color,
+            significance == true ? AppColors.amber : AppColors.textSecondary,
+          );
+        },
+      );
+    }
   });
 
   group('ClimateTrendCard – expandable secondary statistical details', () {

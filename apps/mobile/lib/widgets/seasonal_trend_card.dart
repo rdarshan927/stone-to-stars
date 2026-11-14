@@ -40,12 +40,18 @@ class SeasonalTrendCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xxs),
           Semantics(header: true, child: Text(title, style: AppText.subtitle)),
           const SizedBox(height: AppSpacing.md),
-          if (!trend.hasResult)
+          if (!trend.hasResult) ...[
+            const StatusPill(
+              label: 'Insufficient data',
+              color: AppColors.textSecondary,
+              icon: Icons.info_outline,
+            ),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Insufficient data for seasonal trend analysis.',
               style: AppText.bodySmall,
-            )
-          else ...[
+            ),
+          ] else ...[
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,

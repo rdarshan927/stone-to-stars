@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
 import '../models/climate_analysis.dart';
+import 'app_card.dart';
+import 'status_pill.dart';
 
 /// Computes the two [FlSpot] endpoints of a Sen's slope trend line.
 ///
@@ -73,15 +75,26 @@ class AnnualChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (series.isEmpty) {
-      return _shell(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              'No data available.',
-              style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
+      return AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Semantics(
+              header: true,
+              child: Text(title, style: AppText.subtitle),
             ),
-          ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(seriesUnits, style: AppText.overline),
+            const SizedBox(height: AppSpacing.md),
+            const StatusPill(
+              label: 'No annual observations',
+              color: AppColors.textSecondary,
+              icon: Icons.info_outline,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text('No data available.', style: AppText.bodySmall),
+            Text('0 annual observations available.', style: AppText.bodySmall),
+          ],
         ),
       );
     }

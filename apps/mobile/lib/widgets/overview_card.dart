@@ -347,6 +347,12 @@ class _TrendPanel extends StatelessWidget {
 
   List<Widget> _buildInsufficientContent() {
     return [
+      const StatusPill(
+        label: 'Insufficient data',
+        color: AppColors.textSecondary,
+        icon: Icons.info_outline,
+      ),
+      const SizedBox(height: AppSpacing.sm),
       Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -383,7 +389,7 @@ class _TrendPanel extends StatelessWidget {
     final dir = trend.direction;
     final known = dir == 'increasing' || dir == 'decreasing';
     final up = dir == 'increasing';
-    final sig = trend.significant ?? false;
+    final sig = trend.significant == true;
     final slope = trend.senSlopePerDecade;
 
     // Colour only confirms *significant* trends; everything else is muted.
@@ -396,7 +402,11 @@ class _TrendPanel extends StatelessWidget {
     ].join(', ');
 
     final String sentence;
-    if (sig) {
+    if (trend.significant == null) {
+      sentence =
+          'Statistical significance is unavailable; this result '
+          'does not establish a confirmed annual trend.';
+    } else if (sig) {
       sentence = known
           ? 'A statistically significant ${up ? 'increase' : 'decrease'} in '
                 'annual $noun ($stat).'
@@ -406,7 +416,8 @@ class _TrendPanel extends StatelessWidget {
           ? 'The slope points ${up ? 'upward' : 'downward'}, but it is not '
                 'statistically significant ($stat). This is inconclusive, '
                 'not evidence of stability.'
-          : 'No clear trend direction was detected ($stat).';
+          : 'No clear trend direction was detected ($stat). This is inconclusive, '
+                'not evidence of stability.';
     }
 
     return [
@@ -443,7 +454,14 @@ class _TrendPanel extends StatelessWidget {
               color: AppColors.textSecondary,
               icon: Icons.horizontal_rule,
             ),
-          StatusPill.significance(significant: sig),
+          if (trend.significant != null)
+            StatusPill.significance(significant: sig)
+          else
+            const StatusPill(
+              label: 'Significance unavailable',
+              color: AppColors.textSecondary,
+              icon: Icons.info_outline,
+            ),
         ],
       ),
       const SizedBox(height: AppSpacing.md),

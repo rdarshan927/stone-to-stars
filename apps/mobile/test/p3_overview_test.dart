@@ -320,8 +320,51 @@ void main() {
         _analysis(temp: _trend(direction: null, significant: null)),
       );
       expect(find.text('No clear direction'), findsOneWidget);
-      expect(find.text('Not significant'), findsWidgets);
+      expect(find.text('Not significant'), findsNothing);
+      expect(find.text('Significance unavailable'), findsOneWidget);
       expect(t.takeException(), isNull);
+    });
+  });
+
+  group('Overview – scientific state clarity', () {
+    for (final direction in <String?>[
+      'increasing',
+      'decreasing',
+      'none',
+      null,
+    ]) {
+      testWidgets(
+        'null significance stays unavailable with direction $direction',
+        (t) async {
+          await _pump(
+            t,
+            _analysis(
+              temp: _trend(direction: direction, significant: null, p: 0.00001),
+              precip: _insufficient(),
+            ),
+          );
+          expect(find.text('Significance unavailable'), findsOneWidget);
+          expect(find.text('Not significant'), findsNothing);
+          expect(find.text('Significant'), findsNothing);
+          expect(find.text('Insufficient data'), findsOneWidget);
+          expect(
+            find.textContaining('does not establish a confirmed annual trend'),
+            findsOneWidget,
+          );
+          expect(_colorOf(t, find.text('+0.320')), AppColors.textSecondary);
+        },
+      );
+    }
+    testWidgets('non-significant directionless results remain inconclusive', (
+      t,
+    ) async {
+      await _pump(
+        t,
+        _analysis(temp: _trend(direction: 'none', significant: false)),
+      );
+      expect(find.textContaining('No clear trend direction'), findsOneWidget);
+      expect(find.textContaining('not evidence of stability'), findsOneWidget);
+      expect(find.text('Not significant'), findsOneWidget);
     });
   });
 

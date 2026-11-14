@@ -5,6 +5,8 @@ import '../models/climate_analysis.dart';
 import '../services/climate_api_service.dart';
 import '../widgets/annual_chart.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/app_card.dart';
+import '../widgets/status_pill.dart';
 import '../widgets/climate_trend_card.dart';
 import '../widgets/excluded_years_panel.dart';
 import '../widgets/seasonal_trend_card.dart';
@@ -55,9 +57,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _analyze() async {
+    if (_loading) return;
     setState(() {
       _loading = true;
       _error = null;
+      _data = null;
     });
     try {
       final result = await _service.fetchAnalysis(
@@ -93,6 +97,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _onAnalyze(double lat, double lon, int start, int end) {
+    if (_loading) return;
     setState(() {
       _lat = lat;
       _lon = lon;
@@ -141,64 +146,89 @@ class _DashboardScreenState extends State<DashboardScreen> {
     };
   }
 
-  Widget _loadingState() => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 60),
-    child: Column(
-      children: [
-        const CircularProgressIndicator(),
-        const SizedBox(height: 20),
-        Text(
-          'Fetching climate data from NASA POWER…',
-          style: Theme.of(context).textTheme.bodySmall
-              ?.copyWith(color: AppColors.textSecondary),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'This may take up to 30 seconds.',
-          style: Theme.of(context).textTheme.labelSmall
-              ?.copyWith(color: AppColors.textSecondary),
-        ),
-      ],
-    ),
+  Widget _loadingState() => _stateCard(
+    title: 'Fetching climate data from NASA POWER…',
+    children: [
+      const CircularProgressIndicator(semanticsLabel: 'Analysis in progress'),
+      const SizedBox(height: AppSpacing.lg),
+      Text(
+        'Waiting for climate observations and analysis. This may take a little while.',
+        style: AppText.bodySmall,
+      ),
+    ],
   );
 
-  Widget _errorState(ApiException err) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 40),
-    child: Column(
+  Widget _errorState(ApiException err) {
+    final (label, guidance, icon) = switch (err.kind) {
+      ApiErrorKind.connection => (
+        'Connection unavailable',
+        'Check your connection and that the climate service is available, then retry.',
+        Icons.cloud_off,
+      ),
+      ApiErrorKind.timeout => (
+        'Request timed out',
+        'The service did not respond in time. You can retry this analysis.',
+        Icons.timer_outlined,
+      ),
+      ApiErrorKind.http => (
+        'Service error',
+        'The climate service could not complete this request. Review the details below before retrying.',
+        Icons.cloud_off,
+      ),
+      ApiErrorKind.invalidResponse => (
+        'Unexpected response',
+        'The service response could not be read as climate analysis. You can retry the request.',
+        Icons.info_outline,
+      ),
+    };
+    return _stateCard(
+      title: 'Failed to load data',
       children: [
-        const Icon(Icons.cloud_off, size: 48, color: AppColors.danger),
-        const SizedBox(height: 16),
-        Text(
-          'Failed to load data',
-          style: Theme.of(context).textTheme.titleMedium
-              ?.copyWith(color: AppColors.danger),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          err.message,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodySmall
-              ?.copyWith(color: AppColors.textSecondary),
-        ),
-        const SizedBox(height: 20),
+        StatusPill(label: label, color: AppColors.danger, icon: icon),
+        const SizedBox(height: AppSpacing.md),
+        Text(guidance, style: AppText.body),
+        const SizedBox(height: AppSpacing.sm),
+        Text(err.message, style: AppText.bodySmall),
+        const SizedBox(height: AppSpacing.lg),
         ElevatedButton.icon(
           onPressed: _analyze,
           icon: const Icon(Icons.refresh, size: 18),
           label: const Text('Retry'),
-          // Colours come from the theme (cyan fill, dark text).
         ),
       ],
-    ),
+    );
+  }
+
+  Widget _emptyState() => _stateCard(
+    title: 'Ready to explore',
+    children: [
+      const StatusPill(
+        label: 'No analysis yet',
+        color: AppColors.textSecondary,
+        icon: Icons.info_outline,
+      ),
+      const SizedBox(height: AppSpacing.md),
+      Text(
+        'Enter a location and press Analyze to begin.',
+        style: AppText.bodySmall,
+      ),
+    ],
   );
 
-  Widget _emptyState() => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 40),
-    child: Text(
-      'Enter a location and press Analyze to begin.',
-      style: Theme.of(context).textTheme.bodySmall
-          ?.copyWith(color: AppColors.textSecondary),
-    ),
-  );
+  Widget _stateCard({required String title, required List<Widget> children}) =>
+      Semantics(
+        liveRegion: true,
+        child: AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Semantics(header: true, child: Text(title, style: AppText.title)),
+              const SizedBox(height: AppSpacing.lg),
+              ...children,
+            ],
+          ),
+        ),
+      );
 
   // ── Sections ─────────────────────────────────────────────────────────────
 
