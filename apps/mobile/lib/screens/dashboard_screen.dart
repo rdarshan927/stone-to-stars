@@ -4,6 +4,7 @@ import '../app/theme.dart';
 import '../models/climate_analysis.dart';
 import '../services/climate_api_service.dart';
 import '../widgets/annual_chart.dart';
+import '../widgets/app_shell.dart';
 import '../widgets/location_form.dart';
 import '../widgets/methodology_panel.dart';
 import '../widgets/overview_card.dart';
@@ -22,8 +23,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  static const double _kDesktopBreakpoint = 900;
-
   late final ClimateApiService _service;
 
   ClimateAnalysis? _data;
@@ -103,119 +102,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= _kDesktopBreakpoint;
-        return isDesktop ? _desktopLayout() : _mobileLayout();
-      },
-    );
-  }
-
-  // ── Desktop layout ──────────────────────────────────────────────────────────
-
-  Widget _desktopLayout() {
-    return Scaffold(
-      body: Row(
+    return AppShell(
+      selectedIndex: _selectedIndex,
+      onDestinationSelected: (i) => setState(() => _selectedIndex = i),
+      child: Column(
         children: [
-          NavigationRail(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-            labelType: NavigationRailLabelType.all,
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard),
-                label: Text('Overview'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.thermostat_outlined),
-                selectedIcon: Icon(Icons.thermostat),
-                label: Text('Temperature'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.water_drop_outlined),
-                selectedIcon: Icon(Icons.water_drop),
-                label: Text('Precipitation'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.science_outlined),
-                selectedIcon: Icon(Icons.science),
-                label: Text('Methodology'),
-              ),
-            ],
+          LocationForm(
+            onAnalyze: _onAnalyze,
+            initialLat: _lat,
+            initialLon: _lon,
+            initialStartYear: _startYear,
+            initialEndYear: _endYear,
+            loading: _loading,
           ),
-          const VerticalDivider(width: 1, color: AppColors.border),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  // Location form always visible at top on desktop.
-                  LocationForm(
-                    onAnalyze: _onAnalyze,
-                    initialLat: _lat,
-                    initialLon: _lon,
-                    initialStartYear: _startYear,
-                    initialEndYear: _endYear,
-                    loading: _loading,
-                  ),
-                  const SizedBox(height: 20),
-                  _body(),
-                ],
-              ),
-            ),
-          ),
+          const SizedBox(height: AppSpacing.lg),
+          _body(),
         ],
-      ),
-    );
-  }
-
-  // ── Mobile layout ───────────────────────────────────────────────────────────
-
-  Widget _mobileLayout() {
-    return Scaffold(
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Overview',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.thermostat_outlined),
-            selectedIcon: Icon(Icons.thermostat),
-            label: 'Temperature',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.water_drop_outlined),
-            selectedIcon: Icon(Icons.water_drop),
-            label: 'Precipitation',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.science_outlined),
-            selectedIcon: Icon(Icons.science),
-            label: 'Methodology',
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        child: Column(
-          children: [
-            LocationForm(
-              onAnalyze: _onAnalyze,
-              initialLat: _lat,
-              initialLon: _lon,
-              initialStartYear: _startYear,
-              initialEndYear: _endYear,
-              loading: _loading,
-            ),
-            const SizedBox(height: 16),
-            _body(),
-          ],
-        ),
       ),
     );
   }

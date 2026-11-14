@@ -62,6 +62,20 @@ class AppSpacing {
   static const double cardPadding = lg;
 }
 
+/// Responsive breakpoints (logical px) and content sizing.
+class AppBreakpoints {
+  AppBreakpoints._();
+
+  /// Below this width: phone layout (bottom navigation bar).
+  static const double medium = 600;
+
+  /// From this width: desktop layout (extended navigation rail).
+  static const double expanded = 1000;
+
+  /// Maximum width of the page content column.
+  static const double contentMaxWidth = 1200;
+}
+
 /// Corner radii.
 class AppRadii {
   AppRadii._();
