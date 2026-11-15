@@ -21,6 +21,8 @@ import 'package:mobile/widgets/overview_card.dart';
 import 'package:mobile/widgets/precipitation_explorer.dart';
 import 'package:mobile/widgets/temperature_explorer.dart';
 
+import 'fixtures/scientific_fixture.dart';
+
 const _provider = MapTileConfiguration(
   apiKey: 'fake',
   style: 'fake',
@@ -108,11 +110,9 @@ class _Backend {
           'interpretation':
               'Insufficient observations in this synthetic response.',
         };
-        variable['seasonal_trend'] = {
-          'status': 'insufficient_data',
-          'slope_units_per_decade':
-              variable['seasonal_trend']['slope_units_per_decade'],
-        };
+        variable['seasonal_trend'] = scientificCase(
+          'empty',
+        )[name]['seasonal_trend'];
       }
     }
     respond(index, 200, jsonEncode(json));

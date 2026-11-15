@@ -16,6 +16,8 @@ import 'package:mobile/widgets/location_form.dart';
 import 'package:mobile/widgets/overview_card.dart';
 import 'package:mobile/widgets/recent_locations.dart';
 
+import 'fixtures/scientific_fixture.dart';
+
 const _initial = (
   latitude: 7.3,
   longitude: 81.8,
@@ -91,10 +93,7 @@ class _Service extends ClimateApiService {
         'ci95_note': old['ci95_note'],
         'interpretation': 'Insufficient observations in synthetic response.',
       };
-      v['seasonal_trend'] = {
-        'status': 'insufficient_data',
-        'slope_units_per_decade': v['seasonal_trend']['slope_units_per_decade'],
-      };
+      v['seasonal_trend'] = scientificCase('empty')[name]['seasonal_trend'];
     }
     pending.last.complete(ClimateAnalysis.fromJson(json));
   }

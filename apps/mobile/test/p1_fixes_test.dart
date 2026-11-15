@@ -20,6 +20,8 @@ import 'package:mobile/services/climate_api_service.dart';
 import 'package:mobile/widgets/location_form.dart';
 import 'package:mobile/widgets/overview_card.dart';
 
+import 'fixtures/scientific_fixture.dart';
+
 // ─── Shared fixture helpers ───────────────────────────────────────────────────
 
 /// Minimal valid backend JSON response with configurable seasonal fields.
@@ -32,7 +34,7 @@ Map<String, dynamic> _fakeJson({
   String precipMethod = 'monthly rate x days',
   bool nullTempSeasonalDirection = false,
 }) {
-  return {
+  return withScientificSections({
     'location': {
       'latitude': 7.3,
       'longitude': 81.8,
@@ -101,13 +103,6 @@ Map<String, dynamic> _fakeJson({
         'slope_units_per_decade': '°C/decade',
         'direction': nullTempSeasonalDirection ? null : tempDirection,
       },
-      'month_wise_trends': [],
-      'anomalies': {
-        'baseline_start': 1991,
-        'baseline_end': 2020,
-        'baseline_mean': 27.4,
-        'records': [],
-      },
     },
     'precipitation': {
       'annual': {
@@ -158,15 +153,8 @@ Map<String, dynamic> _fakeJson({
         'slope_units_per_decade': 'mm/year per decade',
         'direction': precipDirection,
       },
-      'month_wise_trends': [],
-      'anomalies': {
-        'baseline_start': 1991,
-        'baseline_end': 2020,
-        'baseline_mean': 1780.0,
-        'records': [],
-      },
     },
-  };
+  });
 }
 
 ClimateApiService _mockServiceFrom(Map<String, dynamic> json) {

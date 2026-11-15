@@ -19,7 +19,11 @@ import 'package:mobile/widgets/status_pill.dart';
 import 'package:mobile/widgets/methodology_panel.dart';
 import 'package:mobile/widgets/location_form.dart';
 
-const _kFakeResponse = '''
+import 'fixtures/scientific_fixture.dart';
+
+final _kFakeResponse = jsonEncode(
+  withScientificSections(
+    jsonDecode('''
 {
   "location": {
     "latitude": 7.3,
@@ -44,7 +48,7 @@ const _kFakeResponse = '''
     "significance_basis": "Hamed-Rao corrected p-value",
     "confidence_interval": "95% CI via Theil-Sen bootstrap",
     "seasonal": "Seasonal Mann-Kendall across 12 monthly sub-series",
-    "month_wise": "Exploratory per-month MK test, not corrected for multiplicity",
+    "month_wise": "Exploratory per-month MK with Holm-Bonferroni correction",
     "baseline": "1991-2020 WMO climatological normal",
     "limitations": ["NASA POWER is model-derived, not station-observed."]
   },
@@ -88,13 +92,6 @@ const _kFakeResponse = '''
       "sen_slope_per_decade": 0.2,
       "slope_units_per_decade": "°C/decade",
       "direction": "increasing"
-    },
-    "month_wise_trends": [],
-    "anomalies": {
-      "baseline_start": 1991,
-      "baseline_end": 2020,
-      "baseline_mean": 27.4,
-      "records": []
     }
   },
   "precipitation": {
@@ -137,17 +134,12 @@ const _kFakeResponse = '''
       "sen_slope_per_decade": -40.0,
       "slope_units_per_decade": "mm/year per decade",
       "direction": "decreasing"
-    },
-    "month_wise_trends": [],
-    "anomalies": {
-      "baseline_start": 1991,
-      "baseline_end": 2020,
-      "baseline_mean": 1780.0,
-      "records": []
     }
   }
 }
-''';
+''') as Map<String, dynamic>,
+  ),
+);
 
 final _captureKey = GlobalKey();
 

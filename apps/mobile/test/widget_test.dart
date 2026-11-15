@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -7,8 +9,12 @@ import 'package:mobile/models/climate_analysis.dart';
 import 'package:mobile/screens/dashboard_screen.dart';
 import 'package:mobile/services/climate_api_service.dart';
 
+import 'fixtures/scientific_fixture.dart';
+
 /// A minimal valid JSON payload that mirrors the backend response schema.
-const _kFakeResponse = '''
+final _kFakeResponse = jsonEncode(
+  withScientificSections(
+    jsonDecode('''
 {
   "location": {
     "latitude": 7.3,
@@ -33,7 +39,7 @@ const _kFakeResponse = '''
     "significance_basis": "Hamed-Rao corrected p-value",
     "confidence_interval": "95% CI via Theil-Sen bootstrap",
     "seasonal": "Seasonal Mann-Kendall across 12 monthly sub-series",
-    "month_wise": "Exploratory per-month MK test, not corrected for multiplicity",
+    "month_wise": "Exploratory per-month MK with Holm-Bonferroni correction",
     "baseline": "1991-2020 WMO climatological normal",
     "limitations": ["NASA POWER is model-derived, not station-observed."]
   },
@@ -77,13 +83,6 @@ const _kFakeResponse = '''
       "sen_slope_per_decade": 0.2,
       "slope_units_per_decade": "°C/decade",
       "direction": "increasing"
-    },
-    "month_wise_trends": [],
-    "anomalies": {
-      "baseline_start": 1991,
-      "baseline_end": 2020,
-      "baseline_mean": 27.4,
-      "records": []
     }
   },
   "precipitation": {
@@ -126,17 +125,12 @@ const _kFakeResponse = '''
       "sen_slope_per_decade": -40.0,
       "slope_units_per_decade": "mm/year per decade",
       "direction": "decreasing"
-    },
-    "month_wise_trends": [],
-    "anomalies": {
-      "baseline_start": 1991,
-      "baseline_end": 2020,
-      "baseline_mean": 1780.0,
-      "records": []
     }
   }
 }
-''';
+''') as Map<String, dynamic>,
+  ),
+);
 
 /// Creates a [ClimateApiService] backed by a mock HTTP client that always
 /// returns [_kFakeResponse].
@@ -259,13 +253,6 @@ void main() {
           'slope_units_per_decade': '°C/decade',
           'direction': null,
         },
-        'month_wise_trends': [],
-        'anomalies': {
-          'baseline_start': 1991,
-          'baseline_end': 2020,
-          'baseline_mean': 27.0,
-          'records': [],
-        },
       },
       'precipitation': {
         'annual': {
@@ -311,17 +298,10 @@ void main() {
           'slope_units_per_decade': 'mm/year per decade',
           'direction': null,
         },
-        'month_wise_trends': [],
-        'anomalies': {
-          'baseline_start': 1991,
-          'baseline_end': 2020,
-          'baseline_mean': 1780.0,
-          'records': [],
-        },
       },
     };
 
-    final analysis = ClimateAnalysis.fromJson(json);
+    final analysis = ClimateAnalysis.fromJson(withScientificSections(json));
     expect(analysis.location.latitude, 7.3);
     expect(analysis.temperature.series.length, 1);
     expect(analysis.precipitation.series.first.value, 1800.0);
