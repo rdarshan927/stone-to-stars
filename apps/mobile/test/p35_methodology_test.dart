@@ -86,12 +86,15 @@ void main() {
           .toList();
       final headings = [
         'Statistical Parameters',
-        'Significance & CI',
+        'Data & completeness',
+        "Sen's slope",
+        'Mann-Kendall & Hamed-Rao',
+        'Confidence intervals',
         'Seasonality',
         'Month-wise Trends',
         'Anomaly Baseline',
-        'Limitations',
         'Interpreting results',
+        'Limitations',
       ];
       for (var i = 1; i < headings.length; i++) {
         expect(
@@ -121,11 +124,11 @@ void main() {
   );
 
   testWidgets(
-    'uses Observatory cards, semantic headings, and informational colours',
+    'uses open sections, one interpretation callout, semantic headings and informational colours',
     (tester) async {
       final semantics = tester.ensureSemantics();
       await pumpPanel(tester, methodology());
-      expect(find.byType(AppCard), findsNWidgets(2));
+      expect(find.byType(AppCard), findsOneWidget);
       final heading = tester.getSemantics(find.text('Statistical Parameters'));
       expect(heading.flagsCollection.isHeader, isTrue);
       for (final text in tester.widgetList<Text>(
@@ -178,30 +181,33 @@ void main() {
         await pumpPanel(tester, data, width: width);
         expectSuppliedContent(data);
         final parameters = tester.getRect(find.text('Statistical Parameters'));
-        final significance = tester.getRect(find.text('Significance & CI'));
-        final seasonal = tester.getRect(find.text('Seasonality'));
+        final source = tester.getRect(find.text('Data & completeness'));
+        final slope = tester.getRect(find.text("Sen's slope"));
+        final significance = tester.getRect(
+          find.text('Mann-Kendall & Hamed-Rao'),
+        );
+        final ci = tester.getRect(find.text('Confidence intervals'));
         if (width >= 1024) {
-          expect(seasonal.top, parameters.top);
-          expect(seasonal.left, greaterThan(parameters.right));
+          expect(slope.top, source.top);
+          expect(slope.left, greaterThan(source.right));
+          expect(ci.top, significance.top);
         } else {
-          expect(seasonal.left, parameters.left);
-          expect(seasonal.top, greaterThan(significance.bottom));
+          expect(slope.left, source.left);
+          expect(slope.top, greaterThan(source.bottom));
+          expect(ci.top, greaterThan(significance.bottom));
         }
-        final cards = find.byType(AppCard);
-        final panel = tester.getRect(cards.first);
-        final guidance = tester.getRect(cards.last);
-        expect(
-          guidance.left,
-          panel.left + AppSpacing.cardPadding + AppBorders.width,
-        );
-        expect(
-          guidance.right,
-          panel.right - AppSpacing.cardPadding - AppBorders.width,
-        );
+        final panel = tester.getRect(find.byType(MethodologyPanel));
+        final guidance = tester.getRect(find.byType(AppCard));
+        expect(guidance.left, panel.left);
+        expect(guidance.right, panel.right);
         expect(tester.getTopLeft(find.text('Limitations')).dx, parameters.left);
         expect(
           tester.getTopLeft(find.text('Limitations')).dy,
           greaterThan(tester.getBottomLeft(find.text(data.baseline)).dy),
+        );
+        expect(
+          tester.getTopLeft(find.text('Interpreting results')).dy,
+          lessThan(tester.getTopLeft(find.text('Limitations')).dy),
         );
 
         // Check actual laid-out text, including content below the viewport.

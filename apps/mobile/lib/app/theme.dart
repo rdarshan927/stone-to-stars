@@ -10,6 +10,7 @@ export 'tokens.dart';
 TextTheme _textTheme(TextTheme base) {
   return base
       .apply(
+        fontFamily: 'Roboto',
         bodyColor: AppColors.textPrimary,
         displayColor: AppColors.textPrimary,
       )
@@ -52,6 +53,7 @@ ThemeData buildTheme() {
       );
 
   final base = ThemeData(
+    fontFamily: 'Roboto',
     useMaterial3: true,
     colorScheme: scheme,
     brightness: Brightness.dark,

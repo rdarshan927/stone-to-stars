@@ -14,11 +14,15 @@ class SeasonalTrendCard extends StatelessWidget {
     required this.title,
     required this.trend,
     required this.accentColor,
+    this.framed = true,
   });
 
   final String title;
   final SeasonalTrend trend;
   final Color accentColor;
+
+  /// Open presentation for a section without an enclosing card.
+  final bool framed;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +33,7 @@ class SeasonalTrendCard extends StatelessWidget {
         ? accentColor
         : AppColors.textSecondary;
 
-    return AppCard(
+    return _surface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -103,4 +107,7 @@ class SeasonalTrendCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _surface({required Widget child}) =>
+      framed ? AppCard(child: child) : child;
 }

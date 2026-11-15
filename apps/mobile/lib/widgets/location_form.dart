@@ -28,6 +28,7 @@ class LocationForm extends StatefulWidget {
     this.initialEndYear = 2025,
     this.loading = false,
     this.compactMode = false,
+    this.editLabel = 'Edit',
   });
 
   final void Function(double lat, double lon, int start, int end) onAnalyze;
@@ -37,6 +38,7 @@ class LocationForm extends StatefulWidget {
   final int initialEndYear;
   final bool loading;
   final bool compactMode;
+  final String editLabel;
 
   @override
   State<LocationForm> createState() => _LocationFormState();
@@ -154,8 +156,6 @@ class _LocationFormState extends State<LocationForm> {
                 const SizedBox(height: 2),
                 Text(
                   '$coordText  ·  $periodText',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: AppText.numeric.copyWith(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -173,26 +173,28 @@ class _LocationFormState extends State<LocationForm> {
             ),
           ],
           const SizedBox(width: AppSpacing.xs),
-          TextButton.icon(
-            onPressed: () => setState(() => _expandedOnPhone = true),
-            icon: const Icon(Icons.tune, size: 16, color: AppColors.cyan),
-            label: Text(
-              'Edit',
-              style: AppText.label.copyWith(
-                color: AppColors.cyan,
-                fontWeight: FontWeight.w600,
+          Flexible(
+            child: TextButton.icon(
+              onPressed: () => setState(() => _expandedOnPhone = true),
+              icon: const Icon(Icons.tune, size: 16, color: AppColors.cyan),
+              label: Text(
+                widget.editLabel,
+                style: AppText.label.copyWith(
+                  color: AppColors.cyan,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                minimumSize: const Size(
+                  kMinInteractiveDimension,
+                  kMinInteractiveDimension,
+                ),
+                tapTargetSize: MaterialTapTargetSize.padded,
               ),
-              minimumSize: const Size(
-                kMinInteractiveDimension,
-                kMinInteractiveDimension,
-              ),
-              tapTargetSize: MaterialTapTargetSize.padded,
             ),
           ),
         ],

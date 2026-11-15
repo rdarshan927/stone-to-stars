@@ -22,12 +22,16 @@ class ClimateTrendCard extends StatefulWidget {
     required this.title,
     required this.trend,
     required this.accentColor,
+    this.framed = true,
     this.eyebrow = 'ANNUAL TREND',
   });
 
   final String title;
   final TrendResult trend;
   final Color accentColor;
+
+  /// Open presentation for a section without an enclosing card.
+  final bool framed;
   final String eyebrow;
 
   @override
@@ -49,7 +53,7 @@ class _ClimateTrendCardState extends State<ClimateTrendCard> {
   @override
   Widget build(BuildContext context) {
     if (!_trend.hasResult) {
-      return AppCard(
+      return _surface(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -100,7 +104,7 @@ class _ClimateTrendCardState extends State<ClimateTrendCard> {
         ? widget.accentColor
         : AppColors.textSecondary;
 
-    return AppCard(
+    return _surface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -267,4 +271,7 @@ class _ClimateTrendCardState extends State<ClimateTrendCard> {
       ],
     );
   }
+
+  Widget _surface({required Widget child}) =>
+      widget.framed ? AppCard(child: child) : child;
 }

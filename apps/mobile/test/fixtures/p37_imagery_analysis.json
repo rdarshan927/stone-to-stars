@@ -1,0 +1,600 @@
+{
+  "location": {
+    "latitude": 7.3,
+    "longitude": 81.8,
+    "elevation_m": 16,
+    "requested_latitude": 7.3,
+    "requested_longitude": 81.8
+  },
+  "dataset": {
+    "provider": "NASA POWER",
+    "title": "Prediction of Worldwide Energy Resources",
+    "sources": [
+      "MERRA2"
+    ],
+    "time_standard": "LST",
+    "community": "AG"
+  },
+  "period": {
+    "start_year": 1981,
+    "end_year": 2025
+  },
+  "methodology": {
+    "alpha": 0.05,
+    "min_observations": 10,
+    "hamed_rao_lag": 3,
+    "annual_completeness": "Annual values require all 12 valid monthly observations; NASA's YYYY13 value is never used.",
+    "significance_basis": "Hamed-Rao corrected p-value (lag limited to 3); the original Mann-Kendall p-value is reported alongside.",
+    "confidence_interval": "Conventional 95% Theil-Sen confidence interval (Sen 1968, as implemented in scipy.stats.theilslopes). It is NOT adjusted for autocorrelation and may be too narrow for serially correlated data.",
+    "seasonal": "Hirsch-Slack seasonal Mann-Kendall with period 12; not autocorrelation-adjusted.",
+    "month_wise": "Exploratory; Holm-Bonferroni adjusted p-values provided.",
+    "baseline": "1991-2020 when each calendar month has >= 24 valid observations, otherwise a labelled custom reference period.",
+    "limitations": [
+      "Reanalysis grid-cell data (~50 km), not station observations.",
+      "Mann-Kendall detects monotonic trends; non-significance does not prove stability.",
+      "Hamed-Rao treats retained values as consecutive; excluded years create gaps.",
+      "Confidence intervals are not autocorrelation-adjusted.",
+      "Seasonal test ignores correlation between calendar months."
+    ]
+  },
+  "temperature": {
+    "annual": {
+      "method": "Day-weighted mean of 12 monthly mean temperatures (leap years respected); years with fewer than 12 valid months are excluded.",
+      "series": [
+        {
+          "year": 1981,
+          "mean_temperature_c": 26.08
+        },
+        {
+          "year": 1982,
+          "mean_temperature_c": 26.180000000000003
+        },
+        {
+          "year": 1984,
+          "mean_temperature_c": 26.38
+        },
+        {
+          "year": 1985,
+          "mean_temperature_c": 26.08
+        },
+        {
+          "year": 1986,
+          "mean_temperature_c": 26.180000000000003
+        },
+        {
+          "year": 1987,
+          "mean_temperature_c": 26.28
+        },
+        {
+          "year": 1988,
+          "mean_temperature_c": 26.38
+        },
+        {
+          "year": 1989,
+          "mean_temperature_c": 26.48
+        },
+        {
+          "year": 1990,
+          "mean_temperature_c": 26.180000000000003
+        },
+        {
+          "year": 1991,
+          "mean_temperature_c": 26.279999999999998
+        },
+        {
+          "year": 1992,
+          "mean_temperature_c": 26.38
+        },
+        {
+          "year": 1993,
+          "mean_temperature_c": 26.479999999999997
+        },
+        {
+          "year": 1994,
+          "mean_temperature_c": 26.580000000000002
+        },
+        {
+          "year": 1995,
+          "mean_temperature_c": 26.28
+        },
+        {
+          "year": 1996,
+          "mean_temperature_c": 26.38
+        },
+        {
+          "year": 1997,
+          "mean_temperature_c": 26.48
+        },
+        {
+          "year": 1998,
+          "mean_temperature_c": 26.58
+        },
+        {
+          "year": 1999,
+          "mean_temperature_c": 26.680000000000003
+        },
+        {
+          "year": 2000,
+          "mean_temperature_c": 26.38
+        },
+        {
+          "year": 2001,
+          "mean_temperature_c": 26.479999999999997
+        },
+        {
+          "year": 2002,
+          "mean_temperature_c": 26.580000000000002
+        },
+        {
+          "year": 2003,
+          "mean_temperature_c": 26.680000000000003
+        },
+        {
+          "year": 2004,
+          "mean_temperature_c": 26.780000000000005
+        },
+        {
+          "year": 2005,
+          "mean_temperature_c": 26.48
+        },
+        {
+          "year": 2006,
+          "mean_temperature_c": 26.58
+        },
+        {
+          "year": 2007,
+          "mean_temperature_c": 26.680000000000003
+        },
+        {
+          "year": 2008,
+          "mean_temperature_c": 26.779999999999998
+        },
+        {
+          "year": 2010,
+          "mean_temperature_c": 26.58
+        },
+        {
+          "year": 2011,
+          "mean_temperature_c": 26.680000000000003
+        },
+        {
+          "year": 2012,
+          "mean_temperature_c": 26.780000000000005
+        },
+        {
+          "year": 2013,
+          "mean_temperature_c": 26.879999999999995
+        },
+        {
+          "year": 2014,
+          "mean_temperature_c": 26.98
+        },
+        {
+          "year": 2015,
+          "mean_temperature_c": 26.680000000000003
+        },
+        {
+          "year": 2016,
+          "mean_temperature_c": 26.779999999999998
+        },
+        {
+          "year": 2017,
+          "mean_temperature_c": 26.879999999999995
+        },
+        {
+          "year": 2018,
+          "mean_temperature_c": 26.979999999999997
+        },
+        {
+          "year": 2019,
+          "mean_temperature_c": 27.080000000000002
+        },
+        {
+          "year": 2020,
+          "mean_temperature_c": 26.780000000000005
+        },
+        {
+          "year": 2021,
+          "mean_temperature_c": 26.879999999999995
+        },
+        {
+          "year": 2022,
+          "mean_temperature_c": 26.98
+        },
+        {
+          "year": 2023,
+          "mean_temperature_c": 27.08
+        },
+        {
+          "year": 2025,
+          "mean_temperature_c": 26.879999999999995
+        }
+      ],
+      "excluded_years": [
+        {
+          "year": 1983,
+          "valid_months": 11,
+          "missing_months": [
+            12
+          ]
+        },
+        {
+          "year": 2009,
+          "valid_months": 11,
+          "missing_months": [
+            12
+          ]
+        },
+        {
+          "year": 2024,
+          "valid_months": 11,
+          "missing_months": [
+            12
+          ]
+        }
+      ]
+    },
+    "annual_trend": {
+      "status": "ok",
+      "n_observations": 42,
+      "min_observations_required": 10,
+      "value_units": "degC",
+      "alpha": 0.05,
+      "direction": "increasing",
+      "significant": true,
+      "significant_original": true,
+      "kendall_tau": 0.771421389725921,
+      "mk_s": 647.0,
+      "z_original": 7.026860598295384,
+      "p_value_original": 2.11232213251522e-12,
+      "z_hamed_rao": 7.026860598295384,
+      "p_value_hamed_rao": 2.11232213251522e-12,
+      "hamed_rao_lag": 3,
+      "sen_slope_per_year": 0.019999999999999928,
+      "sen_slope_per_decade": 0.1999999999999993,
+      "slope_units_per_year": "degC/year",
+      "slope_units_per_decade": "degC/decade",
+      "ci95_low_per_decade": 0.1724137931034483,
+      "ci95_high_per_decade": 0.22580645161290072,
+      "ci95_low_per_year": 0.017241379310344827,
+      "ci95_high_per_year": 0.02258064516129007,
+      "ci95_note": "Conventional 95% Theil-Sen confidence interval (Sen 1968, as implemented in scipy.stats.theilslopes). It is NOT adjusted for autocorrelation and may be too narrow for serially correlated data.",
+      "interpretation": "Statistically significant increasing monotonic trend at alpha=0.05 (Hamed-Rao corrected p=2.112e-12); Sen's slope +0.2 degC/decade."
+    },
+    "seasonal_trend": {
+      "status": "ok",
+      "method": "Hirsch-Slack seasonal Mann-Kendall, period=12 (within-month comparisons only)",
+      "n_observations": 537,
+      "observations_per_month": {
+        "1": 45,
+        "2": 45,
+        "3": 45,
+        "4": 45,
+        "5": 45,
+        "6": 45,
+        "7": 45,
+        "8": 45,
+        "9": 45,
+        "10": 45,
+        "11": 45,
+        "12": 42
+      },
+      "min_observations_per_month_required": 10,
+      "value_units": "degC",
+      "alpha": 0.05,
+      "direction": "increasing",
+      "significant": true,
+      "mk_s": 8908.0,
+      "var_s": 122613.33333333333,
+      "z": 25.43680746241454,
+      "p_value": 9.88040174838622e-143,
+      "sen_slope_per_year": 0.020000000000000018,
+      "sen_slope_per_decade": 0.20000000000000018,
+      "slope_units_per_year": "degC/year",
+      "slope_units_per_decade": "degC/decade",
+      "autocorrelation_adjusted": false,
+      "interpretation": "Statistically significant increasing seasonal trend at alpha=0.05 (p=9.88e-143; not corrected for autocorrelation); seasonal Sen's slope +0.2 degC/decade."
+    }
+  },
+  "precipitation": {
+    "annual": {
+      "method": "Monthly total (mm) = mean daily rate (mm/day) x days in month; annual total (mm/year) = sum of monthly totals; annual mean rate (mm/day) = annual total / days in year. Years with fewer than 12 valid months are excluded.",
+      "series": [
+        {
+          "year": 1981,
+          "total_mm_per_year": 2100.0,
+          "mean_rate_mm_per_day": 5.7534246575342465
+        },
+        {
+          "year": 1982,
+          "total_mm_per_year": 2131.0,
+          "mean_rate_mm_per_day": 5.838356164383562
+        },
+        {
+          "year": 1984,
+          "total_mm_per_year": 2193.0,
+          "mean_rate_mm_per_day": 5.991803278688525
+        },
+        {
+          "year": 1985,
+          "total_mm_per_year": 2224.0,
+          "mean_rate_mm_per_day": 6.093150684931507
+        },
+        {
+          "year": 1986,
+          "total_mm_per_year": 2255.0,
+          "mean_rate_mm_per_day": 6.178082191780822
+        },
+        {
+          "year": 1987,
+          "total_mm_per_year": 2286.0,
+          "mean_rate_mm_per_day": 6.263013698630137
+        },
+        {
+          "year": 1988,
+          "total_mm_per_year": 2072.0,
+          "mean_rate_mm_per_day": 5.66120218579235
+        },
+        {
+          "year": 1989,
+          "total_mm_per_year": 2103.0,
+          "mean_rate_mm_per_day": 5.761643835616439
+        },
+        {
+          "year": 1990,
+          "total_mm_per_year": 2134.0,
+          "mean_rate_mm_per_day": 5.846575342465753
+        },
+        {
+          "year": 1991,
+          "total_mm_per_year": 2165.0,
+          "mean_rate_mm_per_day": 5.931506849315069
+        },
+        {
+          "year": 1992,
+          "total_mm_per_year": 2196.0,
+          "mean_rate_mm_per_day": 6.0
+        },
+        {
+          "year": 1993,
+          "total_mm_per_year": 2227.0,
+          "mean_rate_mm_per_day": 6.101369863013699
+        },
+        {
+          "year": 1994,
+          "total_mm_per_year": 2258.0,
+          "mean_rate_mm_per_day": 6.186301369863013
+        },
+        {
+          "year": 1995,
+          "total_mm_per_year": 2044.0,
+          "mean_rate_mm_per_day": 5.6
+        },
+        {
+          "year": 1996,
+          "total_mm_per_year": 2075.0,
+          "mean_rate_mm_per_day": 5.669398907103825
+        },
+        {
+          "year": 1997,
+          "total_mm_per_year": 2106.0,
+          "mean_rate_mm_per_day": 5.76986301369863
+        },
+        {
+          "year": 1998,
+          "total_mm_per_year": 2137.0,
+          "mean_rate_mm_per_day": 5.854794520547945
+        },
+        {
+          "year": 1999,
+          "total_mm_per_year": 2168.0,
+          "mean_rate_mm_per_day": 5.93972602739726
+        },
+        {
+          "year": 2000,
+          "total_mm_per_year": 2199.0,
+          "mean_rate_mm_per_day": 6.008196721311475
+        },
+        {
+          "year": 2001,
+          "total_mm_per_year": 2230.0,
+          "mean_rate_mm_per_day": 6.109589041095891
+        },
+        {
+          "year": 2002,
+          "total_mm_per_year": 2016.0,
+          "mean_rate_mm_per_day": 5.523287671232877
+        },
+        {
+          "year": 2003,
+          "total_mm_per_year": 2047.0,
+          "mean_rate_mm_per_day": 5.608219178082192
+        },
+        {
+          "year": 2004,
+          "total_mm_per_year": 2078.0,
+          "mean_rate_mm_per_day": 5.6775956284153
+        },
+        {
+          "year": 2005,
+          "total_mm_per_year": 2109.0,
+          "mean_rate_mm_per_day": 5.778082191780822
+        },
+        {
+          "year": 2006,
+          "total_mm_per_year": 2140.0,
+          "mean_rate_mm_per_day": 5.863013698630137
+        },
+        {
+          "year": 2007,
+          "total_mm_per_year": 2171.0,
+          "mean_rate_mm_per_day": 5.947945205479452
+        },
+        {
+          "year": 2008,
+          "total_mm_per_year": 2202.0,
+          "mean_rate_mm_per_day": 6.016393442622951
+        },
+        {
+          "year": 2010,
+          "total_mm_per_year": 2019.0,
+          "mean_rate_mm_per_day": 5.531506849315068
+        },
+        {
+          "year": 2011,
+          "total_mm_per_year": 2050.0,
+          "mean_rate_mm_per_day": 5.616438356164384
+        },
+        {
+          "year": 2012,
+          "total_mm_per_year": 2081.0,
+          "mean_rate_mm_per_day": 5.685792349726776
+        },
+        {
+          "year": 2013,
+          "total_mm_per_year": 2112.0,
+          "mean_rate_mm_per_day": 5.786301369863014
+        },
+        {
+          "year": 2014,
+          "total_mm_per_year": 2143.0,
+          "mean_rate_mm_per_day": 5.8712328767123285
+        },
+        {
+          "year": 2015,
+          "total_mm_per_year": 2174.0,
+          "mean_rate_mm_per_day": 5.956164383561644
+        },
+        {
+          "year": 2016,
+          "total_mm_per_year": 1959.9999999999998,
+          "mean_rate_mm_per_day": 5.355191256830601
+        },
+        {
+          "year": 2017,
+          "total_mm_per_year": 1990.9999999999998,
+          "mean_rate_mm_per_day": 5.454794520547945
+        },
+        {
+          "year": 2018,
+          "total_mm_per_year": 2022.0,
+          "mean_rate_mm_per_day": 5.53972602739726
+        },
+        {
+          "year": 2019,
+          "total_mm_per_year": 2053.0,
+          "mean_rate_mm_per_day": 5.624657534246575
+        },
+        {
+          "year": 2020,
+          "total_mm_per_year": 2084.0,
+          "mean_rate_mm_per_day": 5.693989071038251
+        },
+        {
+          "year": 2021,
+          "total_mm_per_year": 2115.0,
+          "mean_rate_mm_per_day": 5.794520547945205
+        },
+        {
+          "year": 2022,
+          "total_mm_per_year": 2146.0,
+          "mean_rate_mm_per_day": 5.879452054794521
+        },
+        {
+          "year": 2023,
+          "total_mm_per_year": 1932.0,
+          "mean_rate_mm_per_day": 5.293150684931507
+        },
+        {
+          "year": 2025,
+          "total_mm_per_year": 1994.0,
+          "mean_rate_mm_per_day": 5.463013698630137
+        }
+      ],
+      "excluded_years": [
+        {
+          "year": 1983,
+          "valid_months": 11,
+          "missing_months": [
+            12
+          ]
+        },
+        {
+          "year": 2009,
+          "valid_months": 11,
+          "missing_months": [
+            12
+          ]
+        },
+        {
+          "year": 2024,
+          "valid_months": 11,
+          "missing_months": [
+            12
+          ]
+        }
+      ]
+    },
+    "annual_total_trend": {
+      "status": "ok",
+      "n_observations": 42,
+      "min_observations_required": 10,
+      "value_units": "mm/year",
+      "alpha": 0.05,
+      "direction": "decreasing",
+      "significant": true,
+      "significant_original": true,
+      "kendall_tau": -0.27758420441347276,
+      "mk_s": -239.0,
+      "z_original": -2.5792986612634867,
+      "p_value_original": 0.00990011513274132,
+      "z_hamed_rao": -4.705238287749497,
+      "p_value_hamed_rao": 2.535696046024327e-06,
+      "hamed_rao_lag": 3,
+      "sen_slope_per_year": -4.0,
+      "sen_slope_per_decade": -40.0,
+      "slope_units_per_year": "mm/year",
+      "slope_units_per_decade": "mm/decade",
+      "ci95_low_per_decade": -48.536585365853654,
+      "ci95_high_per_decade": -16.666666666666668,
+      "ci95_low_per_year": -4.853658536585366,
+      "ci95_high_per_year": -1.6666666666666667,
+      "ci95_note": "Conventional 95% Theil-Sen confidence interval (Sen 1968, as implemented in scipy.stats.theilslopes). It is NOT adjusted for autocorrelation and may be too narrow for serially correlated data.",
+      "interpretation": "Statistically significant decreasing monotonic trend at alpha=0.05 (Hamed-Rao corrected p=2.536e-06); Sen's slope -40 mm/decade."
+    },
+    "seasonal_trend": {
+      "status": "ok",
+      "method": "Hirsch-Slack seasonal Mann-Kendall, period=12 (within-month comparisons only)",
+      "n_observations": 537,
+      "observations_per_month": {
+        "1": 45,
+        "2": 45,
+        "3": 45,
+        "4": 45,
+        "5": 45,
+        "6": 45,
+        "7": 45,
+        "8": 45,
+        "9": 45,
+        "10": 45,
+        "11": 45,
+        "12": 42
+      },
+      "min_observations_per_month_required": 10,
+      "value_units": "mm/day",
+      "alpha": 0.05,
+      "direction": "decreasing",
+      "significant": true,
+      "mk_s": -3583.0,
+      "var_s": 123464.33333333333,
+      "z": -10.194239291597473,
+      "p_value": 2.1038507657186853e-24,
+      "sen_slope_per_year": -0.010958904109588996,
+      "sen_slope_per_decade": -0.10958904109588996,
+      "slope_units_per_year": "mm/day/year",
+      "slope_units_per_decade": "mm/day/decade",
+      "autocorrelation_adjusted": false,
+      "interpretation": "Statistically significant decreasing seasonal trend at alpha=0.05 (p=2.104e-24; not corrected for autocorrelation); seasonal Sen's slope -0.11 mm/day/decade."
+    }
+  }
+}

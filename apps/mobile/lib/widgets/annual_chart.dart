@@ -62,6 +62,9 @@ class AnnualChart extends StatelessWidget {
     required this.seriesColor,
     required this.title,
     this.trend,
+    this.framed = true,
+    this.plotHeight = 220,
+    this.fitYAxisLabels = false,
   });
 
   final List<AnnualPoint> series;
@@ -69,13 +72,21 @@ class AnnualChart extends StatelessWidget {
   final Color seriesColor;
   final String title;
 
+  /// Presentation only; data, bounds and interactions are unchanged.
+  final bool framed;
+  final double plotHeight;
+
+  /// Measure large annual-total labels without changing their numeric format.
+  /// Existing chart presentations retain their original gutter by default.
+  final bool fitYAxisLabels;
+
   /// When provided, a trend line is drawn based on Sen's slope.
   final TrendResult? trend;
 
   @override
   Widget build(BuildContext context) {
     if (series.isEmpty) {
-      return AppCard(
+      return _surface(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -196,7 +207,29 @@ class AnnualChart extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final scale = MediaQuery.textScalerOf(context).scale(10) / 10;
-        final plotWidth = (constraints.maxWidth - 52 * scale - AppSpacing.lg)
+        var yLabelWidth = 52 * scale;
+        if (fitYAxisLabels) {
+          final decimals = leftLabels == '%.0f'
+              ? 0
+              : leftLabels == '%.1f'
+              ? 1
+              : 2;
+          for (final value in [minY - yPad, maxY + yPad]) {
+            final painter = TextPainter(
+              text: TextSpan(
+                text: value.toStringAsFixed(decimals),
+                style: DefaultTextStyle.of(context).style
+                    .copyWith(fontSize: 10),
+              ),
+              textDirection: Directionality.of(context),
+              textScaler: MediaQuery.textScalerOf(context),
+            )..layout();
+            final needed = painter.width + AppSpacing.sm;
+            if (needed > yLabelWidth) yLabelWidth = needed;
+            painter.dispose();
+          }
+        }
+        final plotWidth = (constraints.maxWidth - yLabelWidth - AppSpacing.lg)
             .clamp(1.0, double.infinity);
         final baseInterval = _xInterval(years);
         final widthInterval = ((maxX - minX) * 40 * scale / plotWidth)
@@ -270,7 +303,7 @@ class AnnualChart extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                height: 220 + 28 * (scale - 1),
+                height: plotHeight + 28 * (scale - 1),
                 child: Padding(
                   padding: const EdgeInsets.only(
                     right: AppSpacing.lg,
@@ -307,7 +340,7 @@ class AnnualChart extends StatelessWidget {
                           leftTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
-                              reservedSize: 52 * scale,
+                              reservedSize: yLabelWidth,
                               minIncluded: false,
                               maxIncluded: false,
                               getTitlesWidget: (val, _) => Text(
@@ -431,13 +464,18 @@ class AnnualChart extends StatelessWidget {
     return 10;
   }
 
-  Widget _shell({required Widget child}) => Container(
-    width: double.infinity,
-    decoration: BoxDecoration(
-      color: AppColors.surface,
-      borderRadius: AppRadii.lgAll,
-      border: Border.fromBorderSide(AppBorders.subtle),
-    ),
-    child: child,
-  );
+  Widget _surface({required Widget child}) =>
+      framed ? AppCard(child: child) : child;
+
+  Widget _shell({required Widget child}) => !framed
+      ? child
+      : Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: AppRadii.lgAll,
+            border: Border.fromBorderSide(AppBorders.subtle),
+          ),
+          child: child,
+        );
 }

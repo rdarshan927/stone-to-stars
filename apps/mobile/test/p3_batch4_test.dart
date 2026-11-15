@@ -188,6 +188,11 @@ void expectLayout(
   required bool twoColumns,
   required double viewportWidth,
 }) {
+  final openPresentation = !tester
+      .widget<ClimateTrendCard>(find.byType(ClimateTrendCard))
+      .framed;
+  final columnGap = openPresentation ? AppSpacing.xxl : AppSpacing.lg;
+  final sectionGap = openPresentation ? AppSpacing.xl : AppSpacing.lg;
   final chart = tester.getRect(find.byType(AnnualChart));
   final annual = tester.getRect(find.byType(ClimateTrendCard));
   final seasonal = tester.getRect(find.byType(SeasonalTrendCard));
@@ -200,11 +205,19 @@ void expectLayout(
   expect(annual.left, chart.left);
   if (twoColumns) {
     expect(seasonal.top, annual.top);
-    expect(seasonal.left - annual.right, closeTo(AppSpacing.lg, 0.01));
-    expect(seasonal.width, annual.width);
+    expect(seasonal.left - annual.right, closeTo(columnGap, 0.01));
+    final precipitation =
+        tester
+            .widget<ClimateTrendCard>(find.byType(ClimateTrendCard))
+            .accentColor ==
+        AppColors.amber;
+    expect(
+      seasonal.width / annual.width,
+      closeTo(precipitation ? .45 / .55 : 1, .001),
+    );
     expect(seasonal.right, closeTo(chart.right, 0.01));
   } else {
-    expect(seasonal.top - annual.bottom, closeTo(AppSpacing.lg, 0.01));
+    expect(seasonal.top - annual.bottom, closeTo(sectionGap, 0.01));
     expect(seasonal.left, annual.left);
     expect(annual.width, chart.width);
   }
@@ -216,7 +229,7 @@ void expectLayout(
                   ? annual.bottom
                   : seasonal.bottom)
             : seasonal.bottom),
-    closeTo(AppSpacing.lg, 0.01),
+    closeTo(sectionGap, 0.01),
   );
   for (final rect in [chart, annual, seasonal, excluded]) {
     expect(rect.left, greaterThanOrEqualTo(0));

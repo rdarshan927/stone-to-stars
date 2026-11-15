@@ -14,7 +14,6 @@ import 'package:mobile/widgets/annual_chart.dart';
 import 'package:mobile/widgets/climate_trend_card.dart';
 import 'package:mobile/widgets/excluded_years_panel.dart';
 import 'package:mobile/widgets/location_form.dart';
-import 'package:mobile/widgets/overview_card.dart';
 import 'package:mobile/widgets/seasonal_trend_card.dart';
 
 const _kFakeResponse = '''
@@ -231,12 +230,12 @@ void main() {
         find.text('Fetching climate data from NASA POWER…'),
         findsOneWidget,
       );
-      expect(find.byType(OverviewCard), findsNothing);
+      expect(find.byKey(const ValueKey('overview_findings')), findsNothing);
       expect(service.requests, hasLength(1));
       expectNoOverflow(tester, width);
       service.responses.single.complete(result());
       await tester.pumpAndSettle();
-      expect(find.byType(OverviewCard), findsOneWidget);
+      expect(find.byKey(const ValueKey('overview_findings')), findsOneWidget);
       expect(find.text('Fetching climate data from NASA POWER…'), findsNothing);
       expectNoOverflow(tester, width);
     });
@@ -263,7 +262,7 @@ void main() {
         };
         expect(find.text(label), findsOneWidget);
         expect(find.text('Retry'), findsOneWidget);
-        expect(find.byType(OverviewCard), findsNothing);
+        expect(find.byKey(const ValueKey('overview_findings')), findsNothing);
         await tester.pump(const Duration(seconds: 1));
         expect(service.requests, hasLength(1)); // No automatic retry.
         expectNoOverflow(tester, width);

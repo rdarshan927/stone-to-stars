@@ -1,3 +1,5 @@
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -7,6 +9,7 @@ import 'package:mobile/screens/dashboard_screen.dart';
 import 'package:mobile/services/climate_api_service.dart';
 import 'package:mobile/widgets/app_shell.dart';
 import 'package:mobile/widgets/brand_mark.dart';
+import 'package:mobile/widgets/overview_card.dart';
 
 /// Backend always fails: the shell must still render around the error state.
 ClimateApiService _failingService() => ClimateApiService(
@@ -96,32 +99,28 @@ void main() {
 
   group('P3.2 expanded (desktop)', () {
     for (final w in [1000.0, 1280.0, 1920.0]) {
-      testWidgets('width $w: extended rail with wordmark, no overflow', (
-        tester,
-      ) async {
-        await _pump(tester, w, 900);
-        expect(find.byType(NavigationBar), findsNothing);
-        final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
-        expect(rail.extended, isTrue);
-        expect(find.byType(BrandMark), findsOneWidget);
-        expect(find.text('Stone to Stars'), findsOneWidget);
-        expect(find.text('CLIMATE TRENDS'), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      });
+      testWidgets(
+        'width $w: branded top navigation with wordmark, no overflow',
+        (tester) async {
+          await _pump(tester, w, 900);
+          expect(find.byType(NavigationBar), findsNothing);
+          expect(find.byType(NavigationRail), findsNothing);
+          for (var i = 0; i < 4; i++) {
+            expect(find.byKey(ValueKey('observatory_nav_$i')), findsOneWidget);
+          }
+          expect(find.byType(BrandMark), findsOneWidget);
+          expect(find.text('Stone to Stars'), findsOneWidget);
+          expect(find.text('CLIMATE EXPLORER'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        },
+      );
     }
 
     testWidgets('content column is capped at the max content width', (
       tester,
     ) async {
       await _pump(tester, 1920, 900);
-      final card = tester.getSize(
-        find
-            .ancestor(
-              of: find.text('Location & Period'),
-              matching: find.byType(Container),
-            )
-            .first,
-      );
+      final card = tester.getSize(find.byType(OverviewCard));
       expect(card.width, lessThanOrEqualTo(AppBreakpoints.contentMaxWidth));
       // ...and it actually uses the cap on a very wide screen.
       expect(card.width, AppBreakpoints.contentMaxWidth);
@@ -155,12 +154,40 @@ void main() {
         tester,
       ) async {
         await _pump(tester, w, 900);
-        NavigationRail rail() =>
-            tester.widget<NavigationRail>(find.byType(NavigationRail));
-        expect(rail().selectedIndex, 0);
+        if (w < AppBreakpoints.expanded) {
+          expect(
+            tester
+                .widget<NavigationRail>(find.byType(NavigationRail))
+                .selectedIndex,
+            0,
+          );
+        } else {
+          expect(
+            tester
+                .getSemantics(find.byKey(const ValueKey('observatory_nav_0')))
+                .flagsCollection
+                .isSelected,
+            Tristate.isTrue,
+          );
+        }
         await tester.tap(find.byIcon(Icons.science_outlined));
         await tester.pumpAndSettle();
-        expect(rail().selectedIndex, 3);
+        if (w < AppBreakpoints.expanded) {
+          expect(
+            tester
+                .widget<NavigationRail>(find.byType(NavigationRail))
+                .selectedIndex,
+            3,
+          );
+        } else {
+          expect(
+            tester
+                .getSemantics(find.byKey(const ValueKey('observatory_nav_3')))
+                .flagsCollection
+                .isSelected,
+            Tristate.isTrue,
+          );
+        }
 
         // Resize to phone width: same tab must stay selected.
         tester.view.physicalSize = const Size(400, 800);
@@ -182,7 +209,7 @@ void main() {
         await _pump(tester, w, 900);
         expect(find.text('Location & Period'), findsOneWidget);
         if (w < AppBreakpoints.medium) {
-          expect(find.text('Edit'), findsOneWidget);
+          expect(find.text('Edit location'), findsOneWidget);
         } else {
           expect(find.text('Analyze'), findsOneWidget);
         }

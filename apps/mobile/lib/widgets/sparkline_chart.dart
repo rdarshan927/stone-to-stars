@@ -60,6 +60,7 @@ class SparklineChart extends StatelessWidget {
     this.trend,
     this.semanticLabel,
     this.chartHeight = 136,
+    this.compact = false,
   });
 
   final List<AnnualPoint> series;
@@ -68,6 +69,10 @@ class SparklineChart extends StatelessWidget {
   final TrendResult? trend;
   final String? semanticLabel;
   final double chartHeight;
+
+  /// Overview preview: keep the same observations and semantics, with no axes
+  /// or repeated detail legend/footer. Full charts retain their default layout.
+  final bool compact;
 
   bool get _isSignificant =>
       trend != null && trend!.hasResult && (trend!.significant ?? false);
@@ -104,7 +109,7 @@ class SparklineChart extends StatelessWidget {
       label: a11ySummary,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: EdgeInsets.all(compact ? AppSpacing.xs : AppSpacing.md),
         decoration: BoxDecoration(
           color: AppColors.background.withAlpha(140),
           borderRadius: AppRadii.mdAll,
@@ -113,25 +118,31 @@ class SparklineChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _LegendRow(
-              accentColor: accentColor,
-              isSignificant: _isSignificant,
-              showTrendLine: _hasTrendLine,
-            ),
-            const SizedBox(height: AppSpacing.sm),
+            if (!compact) ...[
+              _LegendRow(
+                accentColor: accentColor,
+                isSignificant: _isSignificant,
+                showTrendLine: _hasTrendLine,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
             SizedBox(
               height: chartHeight,
               child: series.isEmpty ? _buildEmptyState() : _buildChart(context),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            const Divider(height: 1, color: AppColors.border),
-            const SizedBox(height: AppSpacing.sm),
-            _FooterStats(
-              latestLabel: latestLabel,
-              latestValue: latestValueText,
-              meanValue: meanValueText,
-              accentColor: _isSignificant ? accentColor : AppColors.textPrimary,
-            ),
+            if (!compact) ...[
+              const SizedBox(height: AppSpacing.sm),
+              const Divider(height: 1, color: AppColors.border),
+              const SizedBox(height: AppSpacing.sm),
+              _FooterStats(
+                latestLabel: latestLabel,
+                latestValue: latestValueText,
+                meanValue: meanValueText,
+                accentColor: _isSignificant
+                    ? accentColor
+                    : AppColors.textPrimary,
+              ),
+            ],
           ],
         ),
       ),
@@ -266,59 +277,61 @@ class SparklineChart extends StatelessWidget {
                 const FlLine(color: AppColors.border, strokeWidth: 0.5),
           ),
           borderData: FlBorderData(show: false),
-          titlesData: FlTitlesData(
-            topTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 44,
-                getTitlesWidget: (val, meta) {
-                  if (val == meta.min || val == meta.max) {
-                    return const SizedBox.shrink();
-                  }
-                  final formatted = yRange < 2
-                      ? val.toStringAsFixed(2)
-                      : (yRange < 20
-                            ? val.toStringAsFixed(1)
-                            : val.toStringAsFixed(0));
-                  return Text(
-                    formatted,
-                    style: AppText.numeric.copyWith(
-                      fontSize: 10,
-                      color: AppColors.textSecondary,
+          titlesData: compact
+              ? const FlTitlesData(show: false)
+              : FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 44,
+                      getTitlesWidget: (val, meta) {
+                        if (val == meta.min || val == meta.max) {
+                          return const SizedBox.shrink();
+                        }
+                        final formatted = yRange < 2
+                            ? val.toStringAsFixed(2)
+                            : (yRange < 20
+                                  ? val.toStringAsFixed(1)
+                                  : val.toStringAsFixed(0));
+                        return Text(
+                          formatted,
+                          style: AppText.numeric.copyWith(
+                            fontSize: 10,
+                            color: AppColors.textSecondary,
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 22,
-                interval: _xInterval(years),
-                getTitlesWidget: (val, _) {
-                  if ((val - val.roundToDouble()).abs() > 0.01) {
-                    return const SizedBox.shrink();
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      '${val.toInt()}',
-                      style: AppText.numeric.copyWith(
-                        fontSize: 10,
-                        color: AppColors.textSecondary,
-                      ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 22,
+                      interval: _xInterval(years),
+                      getTitlesWidget: (val, _) {
+                        if ((val - val.roundToDouble()).abs() > 0.01) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '${val.toInt()}',
+                            style: AppText.numeric.copyWith(
+                              fontSize: 10,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-            ),
-          ),
+                  ),
+                ),
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
               getTooltipColor: (_) => AppColors.surfaceHigh,

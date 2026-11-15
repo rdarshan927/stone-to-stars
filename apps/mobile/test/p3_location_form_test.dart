@@ -333,7 +333,7 @@ void main() {
 
   group('P3.3R DashboardScreen tab-specific LocationForm modes', () {
     testWidgets(
-      'on phone (400 px), Overview uses compact summary while Temperature and Precipitation tabs show full form',
+      'on phone (400 px), all exploration destinations use compact summaries and expose the full editor',
       (tester) async {
         tester.view.physicalSize = const Size(400, 900);
         tester.view.devicePixelRatio = 1.0;
@@ -348,14 +348,17 @@ void main() {
         await tester.pumpAndSettle();
 
         // Tab 0 (Overview): collapsed phone summary with Edit button.
-        expect(find.text('Edit'), findsOneWidget);
+        expect(find.text('Edit location'), findsOneWidget);
         expect(find.byType(TextFormField), findsNothing);
 
-        // Switch to Tab 1 (Temperature): full form with 4 fields in 2 rows.
+        // Temperature starts compact and exposes the same full editor on demand.
         await tester.tap(find.byIcon(Icons.thermostat_outlined));
         await tester.pumpAndSettle();
 
-        expect(find.text('Edit'), findsNothing);
+        expect(find.text('Edit location'), findsOneWidget);
+        expect(find.byType(TextFormField), findsNothing);
+        await tester.tap(find.text('Edit location'));
+        await tester.pumpAndSettle();
         expect(find.byType(TextFormField), findsNWidgets(4));
         expect(find.text('Analyze'), findsOneWidget);
         final tempLatY = tester.getTopLeft(find.byType(TextFormField).at(0)).dy;
@@ -364,19 +367,28 @@ void main() {
             .dy;
         expect(tempStartY, greaterThan(tempLatY));
 
-        // Switch to Tab 2 (Precipitation): full form with 4 fields in 2 rows.
-        await tester.tap(find.byIcon(Icons.water_drop_outlined));
+        await tester.ensureVisible(find.text('Collapse'));
+        await tester.tap(find.text('Collapse'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Edit'), findsNothing);
+        // Precipitation also starts compact and exposes all four editor fields.
+        await tester.tap(find.byIcon(Icons.water_drop_outlined));
+        await tester.pumpAndSettle();
+        expect(find.text('Edit location'), findsOneWidget);
+        expect(find.byType(TextFormField), findsNothing);
+        await tester.tap(find.text('Edit location'));
+        await tester.pumpAndSettle();
         expect(find.byType(TextFormField), findsNWidgets(4));
         expect(find.text('Analyze'), findsOneWidget);
+        await tester.ensureVisible(find.text('Collapse'));
+        await tester.tap(find.text('Collapse'));
+        await tester.pumpAndSettle();
 
         // Switch back to Tab 0 (Overview): collapsed phone summary again.
         await tester.tap(find.byIcon(Icons.dashboard_outlined));
         await tester.pumpAndSettle();
 
-        expect(find.text('Edit'), findsOneWidget);
+        expect(find.text('Edit location'), findsOneWidget);
         expect(find.byType(TextFormField), findsNothing);
       },
     );

@@ -237,26 +237,42 @@ void main() {
     );
 
     testWidgets(
-      'displays latest annual value and period mean in SparklineChart footers',
+      'compact charts retain latest and period mean in accessible summaries',
       (t) async {
         await _pump(t, _analysis());
-        // Temp series: (2000, 27.2), (2001, 27.6) -> Latest (2001): 27.60 °C, Period mean: 27.40 °C
-        expect(find.text('Latest (2001): '), findsNWidgets(2));
-        expect(find.text('27.60 °C'), findsOneWidget);
-        expect(find.text('27.40 °C'), findsOneWidget);
-        // Precip series: (2000, 1400.0), (2001, 1500.0) -> Latest (2001): 1500.0 mm/year, Period mean: 1450.0 mm/year
-        expect(find.text('1500.0 mm/year'), findsOneWidget);
-        expect(find.text('1450.0 mm/year'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(
+            RegExp(r'Latest \(2001\): 27.60 °C. Period mean: 27.40 °C'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(
+            RegExp(
+              r'Latest \(2001\): 1500.0 mm/year. Period mean: 1450.0 mm/year',
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          t
+              .widgetList<SparklineChart>(find.byType(SparklineChart))
+              .every((chart) => chart.compact),
+          isTrue,
+        );
       },
     );
 
-    testWidgets('supporting statistics are shown with plain labels', (t) async {
-      await _pump(t, _analysis());
-      expect(find.text('95% confidence range'), findsNWidgets(2));
-      expect(find.text('Years analysed'), findsNWidgets(2));
-      expect(find.textContaining('p = 0.0120'), findsOneWidget);
-      expect(find.text('Years excluded (incomplete)'), findsNothing);
-    });
+    testWidgets(
+      'coverage is visible without duplicating detailed confidence intervals',
+      (t) async {
+        await _pump(t, _analysis());
+        expect(find.text('95% confidence range'), findsNothing);
+        expect(find.text('Years analysed'), findsNWidgets(2));
+        expect(find.textContaining('p = 0.0120'), findsOneWidget);
+        expect(find.text('Years excluded (incomplete)'), findsNothing);
+      },
+    );
 
     testWidgets('precipitation direction is not framed as good or bad', (
       t,
@@ -408,8 +424,8 @@ void main() {
       );
       expect(find.textContaining('Elevation'), findsNothing);
       expect(find.text('—'), findsOneWidget);
-      // CI row is absent for temperature, still present for precipitation.
-      expect(find.text('95% confidence range'), findsOneWidget);
+      // Confidence intervals remain on the detailed analysis destinations.
+      expect(find.text('95% confidence range'), findsNothing);
       expect(find.textContaining('p = '), findsOneWidget); // precip only
       expect(find.textContaining('α = 0.05'), findsNWidgets(2));
       expect(t.takeException(), isNull);
@@ -454,13 +470,14 @@ void main() {
       expect(find.byType(AppCard), findsNothing);
     });
 
-    testWidgets('project identity is present but not the bare shell wordmark', (
-      t,
-    ) async {
-      await _pump(t, _analysis());
-      expect(find.textContaining('STONE TO STARS'), findsOneWidget);
-      expect(find.text('Stone to Stars'), findsNothing);
-    });
+    testWidgets(
+      'Observatory identity is present without duplicating the shell wordmark',
+      (t) async {
+        await _pump(t, _analysis());
+        expect(find.text('EARTH OBSERVATORY'), findsOneWidget);
+        expect(find.text('Stone to Stars'), findsNothing);
+      },
+    );
 
     testWidgets('NASA POWER disclaimer is preserved and visually quiet', (
       t,
