@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
+import '../app/map_config.dart';
+import '../controllers/location_draft_controller.dart';
 import '../models/climate_analysis.dart';
 import '../services/climate_api_service.dart';
 import '../widgets/app_shell.dart';
@@ -11,14 +13,22 @@ import '../widgets/methodology_guide.dart';
 import '../widgets/overview_card.dart';
 import '../widgets/temperature_explorer.dart';
 import '../widgets/precipitation_explorer.dart';
+import '../widgets/geographical_explorer.dart';
 
 /// The main dashboard screen. Accepts an optional [ClimateApiService] so that
 /// tests can inject a mock without making real HTTP calls.
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, this.service});
+  const DashboardScreen({
+    super.key,
+    this.service,
+    this.mapConfiguration = MapTileConfiguration.environment,
+    this.mapTileProviderFactory,
+  });
 
   // Exposed for injection in tests; null means use the default constructor.
   final ClimateApiService? service;
+  final MapTileConfiguration mapConfiguration;
+  final MapTileProviderFactory? mapTileProviderFactory;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -41,16 +51,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // The editor moves between destinations without recreating its controllers.
   final _locationFormKey = GlobalKey();
+  final _mapSession = MapExplorerSession();
+  late final LocationDraftController _locationDraft;
 
   @override
   void initState() {
     super.initState();
+    _locationDraft = LocationDraftController(
+      latitude: _lat,
+      longitude: _lon,
+      startYear: _startYear,
+      endYear: _endYear,
+    );
     _service = widget.service ?? ClimateApiService();
     _analyze();
   }
 
   @override
   void dispose() {
+    _locationDraft.dispose();
     if (widget.service == null) {
       _service.close();
     }
@@ -116,6 +135,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: _selectedIndex == 0
           ? OverviewCard(
               analysis: _data,
+              geographicalExplorer: GeographicalExplorer(
+                session: _mapSession,
+                draftController: _locationDraft,
+                configuration: widget.mapConfiguration,
+                tileProviderFactory: widget.mapTileProviderFactory,
+              ),
               explorer: _locationForm(),
               status: _loading || _error != null || _data == null
                   ? _body()
@@ -151,6 +176,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _locationForm() => LocationForm(
     key: _locationFormKey,
+    draftController: _locationDraft,
     onAnalyze: _onAnalyze,
     initialLat: _lat,
     initialLon: _lon,

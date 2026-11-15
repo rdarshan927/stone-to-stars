@@ -91,6 +91,14 @@ class ClimateApiService {
         ApiErrorKind.invalidResponse,
         'The backend returned an unexpected response. ${e.message}',
       );
+    } on TypeError {
+      // Nested JSON collections can fail their element casts while parsing.
+      // This is a response-shape failure, not a network connection failure.
+      throw const ApiException(
+        ApiErrorKind.invalidResponse,
+        'The backend returned an unexpected response. '
+        'Some climate records have the wrong structure.',
+      );
     }
   }
 

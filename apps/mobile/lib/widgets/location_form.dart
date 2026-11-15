@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app/theme.dart';
+import '../controllers/location_draft_controller.dart';
 
 String _formatSummaryCoord(double v, String pos, String neg) =>
     '${v.abs().toStringAsFixed(2)}°${v >= 0 ? pos : neg}';
@@ -29,6 +30,7 @@ class LocationForm extends StatefulWidget {
     this.loading = false,
     this.compactMode = false,
     this.editLabel = 'Edit',
+    this.draftController,
   });
 
   final void Function(double lat, double lon, int start, int end) onAnalyze;
@@ -39,6 +41,7 @@ class LocationForm extends StatefulWidget {
   final bool loading;
   final bool compactMode;
   final String editLabel;
+  final LocationDraftController? draftController;
 
   @override
   State<LocationForm> createState() => _LocationFormState();
@@ -46,10 +49,12 @@ class LocationForm extends StatefulWidget {
 
 class _LocationFormState extends State<LocationForm> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _lat;
-  late final TextEditingController _lon;
-  late final TextEditingController _start;
-  late final TextEditingController _end;
+  late LocationDraftController _draft;
+  bool _ownsDraft = false;
+  TextEditingController get _lat => _draft.latitude;
+  TextEditingController get _lon => _draft.longitude;
+  TextEditingController get _start => _draft.startYear;
+  TextEditingController get _end => _draft.endYear;
 
   /// Whether the phone summary bar on Overview has been expanded by the user.
   bool _expandedOnPhone = false;
@@ -57,11 +62,23 @@ class _LocationFormState extends State<LocationForm> {
   @override
   void initState() {
     super.initState();
-    _lat = TextEditingController(text: '${widget.initialLat}');
-    _lon = TextEditingController(text: '${widget.initialLon}');
-    _start = TextEditingController(text: '${widget.initialStartYear}');
-    _end = TextEditingController(text: '${widget.initialEndYear}');
+    _attachDraft();
   }
+
+  void _attachDraft() {
+    _ownsDraft = widget.draftController == null;
+    _draft =
+        widget.draftController ??
+        LocationDraftController(
+          latitude: widget.initialLat,
+          longitude: widget.initialLon,
+          startYear: widget.initialStartYear,
+          endYear: widget.initialEndYear,
+        );
+    _draft.addListener(_draftChanged);
+  }
+
+  void _draftChanged() => setState(() {});
 
   /// P0-4: Keep controllers in sync when the parent commits new query
   /// parameters. Only updates a controller if the corresponding prop has
@@ -70,6 +87,13 @@ class _LocationFormState extends State<LocationForm> {
   @override
   void didUpdateWidget(LocationForm oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.draftController != widget.draftController) {
+      _draft.removeListener(_draftChanged);
+      if (_ownsDraft) _draft.dispose();
+      _attachDraft();
+    }
+    // Shared drafts are never overwritten by submitted-query props.
+    if (widget.draftController != null) return;
     if (oldWidget.initialLat != widget.initialLat) {
       _lat.text = '${widget.initialLat}';
     }
@@ -86,14 +110,13 @@ class _LocationFormState extends State<LocationForm> {
 
   @override
   void dispose() {
-    _lat.dispose();
-    _lon.dispose();
-    _start.dispose();
-    _end.dispose();
+    _draft.removeListener(_draftChanged);
+    if (_ownsDraft) _draft.dispose();
     super.dispose();
   }
 
   void _submit() {
+    if (widget.loading) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final lat = double.parse(_lat.text.trim());
     final lon = double.parse(_lon.text.trim());
@@ -108,26 +131,53 @@ class _LocationFormState extends State<LocationForm> {
   @override
   Widget build(BuildContext context) {
     final isPhone = MediaQuery.sizeOf(context).width < AppBreakpoints.medium;
-
+    final Widget editor;
     if (widget.compactMode && isPhone && !_expandedOnPhone) {
-      return _buildPhoneCollapsedSummary(context);
+      editor = _buildPhoneCollapsedSummary(context);
+    } else if (widget.compactMode && !isPhone) {
+      editor = _buildHorizontalCompactForm(context);
+    } else {
+      editor = _buildFullForm(
+        context,
+        showCollapseAction: widget.compactMode && isPhone && _expandedOnPhone,
+      );
     }
-
-    if (widget.compactMode && !isPhone) {
-      return _buildHorizontalCompactForm(context);
-    }
-
-    return _buildFullForm(
-      context,
-      showCollapseAction: widget.compactMode && isPhone && _expandedOnPhone,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        editor,
+        if (widget.draftController != null && _hasDraftChanges) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Editing a draft. Last submitted query: '
+            '${_formatSummaryCoord(widget.initialLat, 'N', 'S')}, '
+            '${_formatSummaryCoord(widget.initialLon, 'E', 'W')} · '
+            '${widget.initialStartYear}–${widget.initialEndYear}.',
+            key: const ValueKey('submitted_location_context'),
+            style: AppText.bodySmall,
+          ),
+        ],
+      ],
     );
   }
 
+  bool get _hasDraftChanges {
+    final point = _draft.coordinates;
+    return point == null ||
+        point.latitude != widget.initialLat ||
+        point.longitude != widget.initialLon ||
+        int.tryParse(_start.text.trim()) != widget.initialStartYear ||
+        int.tryParse(_end.text.trim()) != widget.initialEndYear;
+  }
+
   Widget _buildPhoneCollapsedSummary(BuildContext context) {
-    final coordText =
-        '${_formatSummaryCoord(widget.initialLat, 'N', 'S')}, '
-        '${_formatSummaryCoord(widget.initialLon, 'E', 'W')}';
-    final periodText = '${widget.initialStartYear}–${widget.initialEndYear}';
+    final point = _draft.coordinates;
+    final coordText = point == null
+        ? 'Incomplete or invalid coordinates'
+        : '${_formatSummaryCoord(point.latitude, 'N', 'S')}, '
+              '${_formatSummaryCoord(point.longitude, 'E', 'W')}';
+    final periodText = '${_start.text}–${_end.text}';
 
     return Container(
       width: double.infinity,
@@ -155,7 +205,7 @@ class _LocationFormState extends State<LocationForm> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$coordText  ·  $periodText',
+                  '$coordText  ·  $periodText${_hasDraftChanges ? ' · Draft, not analyzed' : ''}',
                   style: AppText.numeric.copyWith(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -413,17 +463,11 @@ class _LocationFormState extends State<LocationForm> {
   }
 
   String? _validateLat(String? v) {
-    final d = double.tryParse(v?.trim() ?? '');
-    if (d == null) return 'Enter a number';
-    if (d < -90 || d > 90) return '−90 to 90';
-    return null;
+    return LocationDraftController.latitudeError(v);
   }
 
   String? _validateLon(String? v) {
-    final d = double.tryParse(v?.trim() ?? '');
-    if (d == null) return 'Enter a number';
-    if (d < -180 || d > 180) return '−180 to 180';
-    return null;
+    return LocationDraftController.longitudeError(v);
   }
 
   String? _validateStart(String? v) {
