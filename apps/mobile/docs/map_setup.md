@@ -78,8 +78,17 @@ maps unmount and dispose their tile provider. Browser/native caching can reduce
 repeat transfers, but offline availability is not guaranteed. Native tile cache
 uses a 50 MiB soft limit; no climate data is cached by the map.
 
+Overview's Recent Locations list retains at most five successful submitted
+coordinate/year queries in memory, newest first. Valid responses with insufficient
+observations count as successful analyses; errors and timeouts do not add entries.
+Repeated successful queries move to the top. The two antimeridian representations
+(180° and -180°) deduplicate when latitude and years match, while retaining the
+latest submitted value. Selecting history restores all four draft fields without
+submitting or replacing displayed results. Analyze still requests fresh results;
+this is not a result cache. History clears when the app session ends.
+
 Tile failures display a separate message and an explicit retry action that
 recreates the tile layer/provider while retaining the camera. It can recover from
 transient failures; invalid keys, missing style access or quota exhaustion still
-require provider/account correction. Search, geolocation, recent locations and
+require provider/account correction. Search, geolocation and
 regional analysis are not implemented.

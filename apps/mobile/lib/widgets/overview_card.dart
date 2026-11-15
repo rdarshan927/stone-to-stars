@@ -27,6 +27,7 @@ class OverviewCard extends StatelessWidget {
     this.onTemperature,
     this.onPrecipitation,
     this.geographicalExplorer,
+    this.recentLocations,
   });
 
   final ClimateAnalysis? analysis;
@@ -35,6 +36,7 @@ class OverviewCard extends StatelessWidget {
   final VoidCallback? onTemperature;
   final VoidCallback? onPrecipitation;
   final Widget? geographicalExplorer;
+  final Widget? recentLocations;
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +55,7 @@ class OverviewCard extends StatelessWidget {
           supporting: data == null ? status : _ClimateInsight(analysis: data),
         ),
         ?geographicalExplorer,
+        ?recentLocations,
         if (data != null) ...[
           LayoutBuilder(
             builder: (context, constraints) {

@@ -20,7 +20,7 @@ class LocationDraftController extends ChangeNotifier {
   final TextEditingController longitude;
   final TextEditingController startYear;
   final TextEditingController endYear;
-  bool _updatingCoordinates = false;
+  bool _updating = false;
 
   List<TextEditingController> get _controllers => [
     latitude,
@@ -56,16 +56,33 @@ class LocationDraftController extends ChangeNotifier {
     final normalized = lon >= -180 && lon < 180
         ? lon
         : ((lon + 180) % 360) - 180;
-    _updatingCoordinates = true;
+    _updating = true;
     latitude.text = '${lat == 0 ? 0.0 : lat}';
     longitude.text = '${normalized == 0 ? 0.0 : normalized}';
-    _updatingCoordinates = false;
+    _updating = false;
     notifyListeners();
     return true;
   }
 
   void _changed() {
-    if (!_updatingCoordinates) notifyListeners();
+    if (!_updating) notifyListeners();
+  }
+
+  /// Restore a successful query verbatim, including valid manual polar points.
+  /// No normalization or analysis is performed when selecting history.
+  void restoreAnalyzedLocation({
+    required double latitude,
+    required double longitude,
+    required int startYear,
+    required int endYear,
+  }) {
+    _updating = true;
+    this.latitude.text = '$latitude';
+    this.longitude.text = '$longitude';
+    this.startYear.text = '$startYear';
+    this.endYear.text = '$endYear';
+    _updating = false;
+    notifyListeners();
   }
 
   @override

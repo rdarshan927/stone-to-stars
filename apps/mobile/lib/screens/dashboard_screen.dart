@@ -14,6 +14,7 @@ import '../widgets/overview_card.dart';
 import '../widgets/temperature_explorer.dart';
 import '../widgets/precipitation_explorer.dart';
 import '../widgets/geographical_explorer.dart';
+import '../widgets/recent_locations.dart';
 
 /// The main dashboard screen. Accepts an optional [ClimateApiService] so that
 /// tests can inject a mock without making real HTTP calls.
@@ -53,6 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _locationFormKey = GlobalKey();
   final _mapSession = MapExplorerSession();
   late final LocationDraftController _locationDraft;
+  final _recentLocations = <AnalyzedLocation>[];
 
   @override
   void initState() {
@@ -78,6 +80,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _analyze() async {
     if (_loading) return;
+    final query = (
+      latitude: _lat,
+      longitude: _lon,
+      startYear: _startYear,
+      endYear: _endYear,
+    );
     setState(() {
       _loading = true;
       _error = null;
@@ -85,15 +93,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
     try {
       final result = await _service.fetchAnalysis(
-        latitude: _lat,
-        longitude: _lon,
-        startYear: _startYear,
-        endYear: _endYear,
+        latitude: query.latitude,
+        longitude: query.longitude,
+        startYear: query.startYear,
+        endYear: query.endYear,
       );
       if (mounted) {
         setState(() {
           _data = result;
           _loading = false;
+          _recentLocations.removeWhere(
+            (entry) =>
+                entry.latitude == query.latitude &&
+                (entry.longitude == query.longitude ||
+                    (entry.longitude.abs() == 180 &&
+                        query.longitude.abs() == 180)) &&
+                entry.startYear == query.startYear &&
+                entry.endYear == query.endYear,
+          );
+          _recentLocations.insert(0, query);
+          if (_recentLocations.length > 5) _recentLocations.removeLast();
         });
       }
     } on ApiException catch (e) {
@@ -135,6 +154,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: _selectedIndex == 0
           ? OverviewCard(
               analysis: _data,
+              recentLocations: RecentLocations(
+                entries: List.unmodifiable(_recentLocations),
+                onSelected: (entry) => _locationDraft.restoreAnalyzedLocation(
+                  latitude: entry.latitude,
+                  longitude: entry.longitude,
+                  startYear: entry.startYear,
+                  endYear: entry.endYear,
+                ),
+              ),
               geographicalExplorer: GeographicalExplorer(
                 session: _mapSession,
                 draftController: _locationDraft,
