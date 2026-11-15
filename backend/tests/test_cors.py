@@ -1,4 +1,4 @@
-"""Tests that CORS middleware is configured correctly for Flutter Web dev."""
+"""CORS coverage for the deployed frontend and Flutter Web development."""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -24,10 +24,11 @@ def client() -> TestClient:
         "http://localhost",
         "http://127.0.0.1:8080",
         "http://127.0.0.1",
+        "https://senku-stone-to-star.netlify.app",
     ],
 )
 def test_cors_allowed_origins_receive_acao_header(client: TestClient, origin: str):
-    """A GET from an allowed localhost origin must echo the origin back."""
+    """A GET from an allowed origin must echo the origin back."""
     response = client.get("/health", headers={"Origin": origin})
     assert response.status_code == 200
     acao = response.headers.get("access-control-allow-origin")
@@ -41,6 +42,7 @@ def test_cors_allowed_origins_receive_acao_header(client: TestClient, origin: st
     [
         "http://localhost:36459",  # the specifically requested case
         "http://127.0.0.1:9000",
+        "https://senku-stone-to-star.netlify.app",
     ],
 )
 def test_cors_preflight_allowed(client: TestClient, origin: str):
@@ -70,6 +72,8 @@ def test_cors_preflight_allowed(client: TestClient, origin: str):
         "http://evil.example.com",         # external host
         "http://notlocalhost:8080",        # hostname contains 'localhost' but isn't
         "http://192.168.1.100:5000",       # LAN IP — not in regex
+        "https://senku-stone-to-star.netlify.app.evil.example",
+        "http://senku-stone-to-star.netlify.app",
     ],
 )
 def test_cors_disallowed_origins_have_no_acao_header(

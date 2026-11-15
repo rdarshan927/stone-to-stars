@@ -10,11 +10,12 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Allow Flutter Web running on any localhost/127.0.0.1 port (dev only).
+# Allow the deployed frontend and Flutter Web on local development ports.
 # The regex matches http://localhost, http://localhost:5000,
 # http://127.0.0.1:36459, etc. — the dynamic port Flutter Web assigns.
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=["https://senku-stone-to-star.netlify.app"],
     allow_origin_regex=r"^http://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_methods=["*"],
     allow_headers=["*"],
