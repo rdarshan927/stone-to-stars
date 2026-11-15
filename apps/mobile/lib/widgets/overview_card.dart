@@ -368,12 +368,12 @@ class _Provenance extends StatelessWidget {
           Text(analysis.dataset.sources.join(', '), style: AppText.bodySmall),
         const SizedBox(height: AppSpacing.md),
         _Metadata(
-          label: 'NASA POWER grid cell',
+          label: 'NASA POWER returned point',
           value:
               '${_coord(location.latitude, 'N', 'S')}, ${_coord(location.longitude, 'E', 'W')}',
         ),
         _Metadata(
-          label: 'Requested',
+          label: 'Submitted query coordinate',
           value:
               '${location.requestedLatitude.toStringAsFixed(4)}°, ${location.requestedLongitude.toStringAsFixed(4)}°',
         ),
@@ -383,7 +383,7 @@ class _Provenance extends StatelessWidget {
         ),
         if (location.elevationM != null)
           _Metadata(
-            label: 'Elevation',
+            label: 'NASA POWER elevation estimate',
             value: '${location.elevationM!.toStringAsFixed(0)} m',
           ),
         const SizedBox(height: AppSpacing.md),

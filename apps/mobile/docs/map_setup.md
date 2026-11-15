@@ -55,6 +55,29 @@ fallback provider, tile proxy, offline download or automatic climate retry.
 
 ## Interaction and failures
 
+### Geographic and scientific meaning
+
+The marker selects the requested geographic coordinate stored in the draft.
+After Analyze, the submitted query coordinate identifies the requested location
+for that result. NASA POWER's returned point geometry is separate response
+metadata; it is not a verified source-grid cell center or footprint. The app
+does not establish cell boundaries, nearest-cell selection or interpolation
+behavior from that point geometry.
+
+For the currently configured monthly meteorological products (`T2M` and
+`PRECTOTCORR`, community `AG`), NASA documents a native meteorological source
+grid of approximately 0.5° latitude × 0.625° longitude. This describes source-grid
+spacing, not precise conditions at the marker or a uniform distance in kilometres.
+NASA POWER provides gridded estimates, not a weather-station measurement at the
+selected point. Zooming the basemap does not increase source-data resolution.
+
+References:
+- https://power.larc.nasa.gov/docs/methodology/data/sources_meteorology/
+- https://power.larc.nasa.gov/docs/services/api/temporal/monthly/
+- https://power.larc.nasa.gov/api/temporal/monthly/openapi.json
+
+### Controls and results
+
 Drag/pinch/double-click the map or use keyboard-operable zoom and recenter
 controls. Focused maps support arrow-key panning. Ordinary wheel scrolling is
 left to the page. Recenter restores the world view, not a selected analysis point.

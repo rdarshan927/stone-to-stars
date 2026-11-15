@@ -50,7 +50,8 @@ class Location {
     requestedLongitude: _double(json, 'requested_longitude'),
   );
 
-  /// Coordinates of the NASA grid cell actually returned.
+  /// Point coordinates returned in NASA POWER geometry metadata; these do not
+  /// establish a source-grid cell center or boundary.
   final double latitude;
   final double longitude;
   final double? elevationM;

@@ -409,10 +409,26 @@ void main() {
         final readout = find.byKey(const ValueKey('map_draft_location'));
         await tester.ensureVisible(readout);
         expect(tester.getRect(readout).right, lessThanOrEqualTo(width));
+        final guidance = find.byKey(const ValueKey('map_scientific_guidance'));
+        await tester.ensureVisible(guidance);
         expect(
-          find.textContaining('marker is not a weather station'),
-          findsOneWidget,
+          tester.widget<Text>(guidance).data,
+          'The marker selects a requested geographic coordinate. '
+          'NASA POWER provides gridded meteorological estimates, not a '
+          'weather-station measurement at that point. Zooming the map '
+          'does not increase climate-data resolution.',
         );
+        final guidanceRect = tester.getRect(guidance);
+        expect(guidanceRect.left, greaterThanOrEqualTo(0));
+        expect(guidanceRect.right, lessThanOrEqualTo(width));
+        expect(
+          tester.getSemantics(guidance).label,
+          contains(
+            'Zooming the map does not increase climate-data resolution.',
+          ),
+        );
+        await tester.ensureVisible(find.text('© OpenStreetMap contributors'));
+        expect(find.text('© MapTiler'), findsOneWidget);
         expect(service.requests, hasLength(1));
         expect(tester.takeException(), isNull);
         semantics.dispose();

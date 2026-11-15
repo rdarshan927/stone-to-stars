@@ -422,7 +422,7 @@ void main() {
           sources: const [],
         ),
       );
-      expect(find.textContaining('Elevation'), findsNothing);
+      expect(find.text('NASA POWER elevation estimate'), findsNothing);
       expect(find.text('—'), findsOneWidget);
       // Confidence intervals remain on the detailed analysis destinations.
       expect(find.text('95% confidence range'), findsNothing);
@@ -447,28 +447,75 @@ void main() {
   });
 
   group('Overview – editorial header and quiet data note', () {
-    testWidgets('describes grid cell location and period from the data', (
-      t,
-    ) async {
-      await _pump(
-        t,
-        _analysis(
-          lat: -33.75,
-          lon: -70.62,
-          reqLat: -33.8,
-          reqLon: -70.6,
-          start: 1990,
-          end: 2020,
-        ),
-      );
-      expect(find.text('33.75°S, 70.62°W'), findsOneWidget);
-      expect(find.textContaining('1990–2020'), findsWidgets);
-      expect(find.textContaining('-33.8000°, -70.6000°'), findsOneWidget);
-      expect(find.textContaining('Elevation'), findsOneWidget);
-      expect(find.text('DATASET PROVENANCE'), findsOneWidget);
-      // Editorial header and quiet disclaimer avoid wrapping in AppCard.
-      expect(find.byType(AppCard), findsNothing);
-    });
+    testWidgets(
+      'separately identifies returned point and submitted query metadata',
+      (t) async {
+        await _pump(
+          t,
+          _analysis(
+            lat: -33.75,
+            lon: -70.62,
+            reqLat: -33.8,
+            reqLon: -70.6,
+            start: 1990,
+            end: 2020,
+          ),
+        );
+        expect(find.text('33.75°S, 70.62°W'), findsOneWidget);
+        expect(find.textContaining('1990–2020'), findsWidgets);
+        expect(find.textContaining('-33.8000°, -70.6000°'), findsOneWidget);
+        expect(find.text('NASA POWER elevation estimate'), findsOneWidget);
+        expect(find.text('NASA POWER returned point'), findsOneWidget);
+        expect(find.text('Submitted query coordinate'), findsOneWidget);
+        final returnedRow = find
+            .ancestor(
+              of: find.text('NASA POWER returned point'),
+              matching: find.byType(Wrap),
+            )
+            .first;
+        final submittedRow = find
+            .ancestor(
+              of: find.text('Submitted query coordinate'),
+              matching: find.byType(Wrap),
+            )
+            .first;
+        expect(
+          find.descendant(
+            of: returnedRow,
+            matching: find.text('33.75°S, 70.62°W'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: submittedRow,
+            matching: find.text('-33.8000°, -70.6000°'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: returnedRow,
+            matching: find.text('-33.8000°, -70.6000°'),
+          ),
+          findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: submittedRow,
+            matching: find.text('33.75°S, 70.62°W'),
+          ),
+          findsNothing,
+        );
+        expect(find.text('NASA POWER grid cell'), findsNothing);
+        expect(find.text('Requested'), findsNothing);
+        expect(find.textContaining('grid-cell center'), findsNothing);
+        expect(find.textContaining('grid-cell footprint'), findsNothing);
+        expect(find.text('DATASET PROVENANCE'), findsOneWidget);
+        // Editorial header and quiet disclaimer avoid wrapping in AppCard.
+        expect(find.byType(AppCard), findsNothing);
+      },
+    );
 
     testWidgets(
       'Observatory identity is present without duplicating the shell wordmark',

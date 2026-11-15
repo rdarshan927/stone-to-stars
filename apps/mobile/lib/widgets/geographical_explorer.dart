@@ -97,7 +97,16 @@ class _GeographicalExplorerState extends State<GeographicalExplorer> {
             Text(
               widget.draftController == null
                   ? 'Pan and zoom to explore geography. Use the location form to analyze coordinates.'
-                  : 'Tap or click to choose draft coordinates, then press Analyze in the location form. NASA POWER provides gridded climate estimates; the marker is not a weather station or a grid-cell boundary.',
+                  : 'Tap or click to choose draft coordinates, then press Analyze in the location form.',
+              style: AppText.bodySmall,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'The marker selects a requested geographic coordinate. '
+              'NASA POWER provides gridded meteorological estimates, not a '
+              'weather-station measurement at that point. Zooming the map '
+              'does not increase climate-data resolution.',
+              key: const ValueKey('map_scientific_guidance'),
               style: AppText.bodySmall,
             ),
             const SizedBox(height: AppSpacing.md),
