@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -32,16 +32,127 @@
 
   <title>Stone to Stars</title>
   <link rel="manifest" href="manifest.json">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html, body { margin: 0; background: #07112B; color-scheme: dark; }
+    #startup-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      overflow: auto;
+      box-sizing: border-box;
+      padding: 24px;
+      background: #07112B;
+      color: #E8EEF9;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      text-align: center;
+      opacity: 1;
+      transition: opacity 220ms ease-out;
+    }
+    #startup-loader.is-ready { opacity: 0; pointer-events: none; }
+    .startup-content { width: min(100%, 28rem); margin: auto; }
+    .startup-logo { display: block; width: 80px; height: 80px; margin: 0 auto 24px; border-radius: 18px; }
+    .startup-title { margin: 0 0 16px; font-size: clamp(1.25rem, 4vw, 1.8rem); font-weight: 600; line-height: 1.4; letter-spacing: .16em; }
+    .startup-indicator {
+      width: 28px;
+      height: 28px;
+      margin: 0 auto 20px;
+      border: 2px solid #243352;
+      border-top-color: #22D3EE;
+      border-radius: 50%;
+      animation: startup-orbit 900ms linear infinite;
+    }
+    #startup-message { margin: 0; color: #93A1BD; font-size: 1rem; line-height: 1.6; }
+    #startup-retry {
+      min-height: 48px;
+      margin-top: 24px;
+      padding: 12px 20px;
+      border: 1px solid #22D3EE;
+      border-radius: 8px;
+      background: transparent;
+      color: #22D3EE;
+      font: inherit;
+      cursor: pointer;
+    }
+    #startup-retry[hidden] { display: none; }
+    #startup-retry:hover { background: #10374A; }
+    #startup-retry:focus-visible { outline: 2px solid #E8EEF9; outline-offset: 4px; }
+    #startup-loader.has-error .startup-indicator { display: none; }
+    @keyframes startup-orbit { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      #startup-loader { transition: none; }
+      .startup-indicator { animation: none; }
+    }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <div id="startup-loader" role="status" aria-live="polite" aria-busy="true">
+    <div class="startup-content">
+      <img class="startup-logo" src="icons/Icon-192.png" width="80" height="80" alt="" decoding="async">
+      <h1 class="startup-title">STONE TO STARS</h1>
+      <div class="startup-indicator" aria-hidden="true"></div>
+      <p id="startup-message">Initializing Climate Observatory...</p>
+      <button id="startup-retry" type="button" hidden>Reload observatory</button>
+      <noscript>
+        <style>.startup-indicator, #startup-message { display: none; }</style>
+        <p>Enable JavaScript to open the Climate Observatory.</p>
+      </noscript>
+    </div>
+  </div>
+  <!-- Register before the async bootstrap can initialize Flutter. -->
+  <script id="startup-controller">
+    (() => {
+      const loader = document.getElementById('startup-loader');
+      const message = document.getElementById('startup-message');
+      const retry = document.getElementById('startup-retry');
+      let rendered = false;
+      const slowStart = setTimeout(() => {
+        if (rendered) return;
+        message.textContent = 'Initialization is taking longer than expected. Check your connection or reload.';
+        retry.hidden = false;
+      }, 30000);
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
+      function failed() {
+        if (rendered) return;
+        clearTimeout(slowStart);
+        loader.classList.add('has-error');
+        loader.setAttribute('aria-busy', 'false');
+        message.textContent = 'The Climate Observatory could not start. Check your connection and try again.';
+        retry.hidden = false;
+      }
+
+      function startupError(event) {
+        // Image errors and later map/API errors must not control startup UI.
+        if (event.error || event.target?.tagName === 'SCRIPT') failed();
+      }
+
+      window.addEventListener('stone-to-stars-startup-error', failed);
+      window.addEventListener('error', startupError, true);
+      window.addEventListener('unhandledrejection', failed);
+      retry.addEventListener('click', () => window.location.reload());
+      window.addEventListener('flutter-first-frame', () => {
+        rendered = true;
+        clearTimeout(slowStart);
+        window.removeEventListener('stone-to-stars-startup-error', failed);
+        window.removeEventListener('error', startupError, true);
+        window.removeEventListener('unhandledrejection', failed);
+        loader.setAttribute('aria-busy', 'false');
+        loader.setAttribute('aria-hidden', 'true');
+        loader.inert = true;
+        loader.classList.add('is-ready');
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          loader.remove();
+        } else {
+          loader.addEventListener('transitionend', (event) => {
+            if (event.target === loader && event.propertyName === 'opacity') loader.remove();
+          }, { once: true });
+          // Cleanup fallback only AFTER the first frame and its fade-out.
+          setTimeout(() => loader.remove(), 300);
+        }
+      }, { once: true });
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
