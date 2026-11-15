@@ -8,6 +8,7 @@ import 'excluded_years_panel.dart';
 import 'observatory_layout.dart';
 import 'observatory_artwork.dart';
 import 'seasonal_trend_card.dart';
+import 'temperature_anomaly_explorer.dart';
 
 /// Temperature presentation; request and editor state stay in the dashboard.
 class TemperatureExplorer extends StatelessWidget {
@@ -93,6 +94,8 @@ class TemperatureExplorer extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl),
             ExcludedYearsPanel(excludedYears: data.temperature.excludedYears),
           ],
+          const SizedBox(height: AppSpacing.xl),
+          TemperatureAnomalyExplorer(result: data.temperature.anomalies),
           const SizedBox(height: AppSpacing.xl),
           ObservatorySection(
             title: 'Reading the evidence',
