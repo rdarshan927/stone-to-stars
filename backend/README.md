@@ -18,7 +18,8 @@ pytest            # offline; uses data/samples/nasa_power_monthly_sample.json
 | `app/climate.py` | `GET /api/v1/climate/monthly` route, input validation |
 | `app/nasa_power.py` | NASA POWER async client and response parser |
 | `app/schemas.py` | Response models |
-| `app/analysis.py` | Trend analysis (aggregation, Mann-Kendall, Sen, anomalies); not yet exposed via an endpoint |
+| `app/analysis.py` | Trend analysis (aggregation, Mann-Kendall, Sen, anomalies) |
+| `app/analysis_api.py` | `GET /api/v1/analysis/climate` route |
 | `tests/` | Offline tests (mocked HTTP transport, synthetic data, sample fixture) |
 
 ## `GET /api/v1/climate/monthly`
@@ -88,9 +89,9 @@ Pure functions with typed (pydantic) results; no I/O. Entry points:
 `analyze_temperature(records, start_year, end_year, baseline)` and
 `analyze_precipitation(...)`. The building blocks (`aggregate_annual_*`,
 `analyze_trend`, `seasonal_mann_kendall`, `month_wise_trends`,
-`compute_anomalies`) are independently usable. There is no HTTP endpoint for
-analysis yet. Units are explicit in every result (`degC`, `mm/day`, `mm/year`,
-`degC/decade`, ...).
+`compute_anomalies`) are independently usable. The analysis is exposed at
+`GET /api/v1/analysis/climate` (below). Units are explicit in every result
+(`degC`, `mm/day`, `mm/year`, `degC/decade`, ...).
 
 ### Annual aggregation
 
@@ -168,3 +169,38 @@ analysis yet. Units are explicit in every result (`degC`, `mm/day`, `mm/year`,
   variables); p-values near 0.05 should not be over-interpreted.
 - Validated against `pymannkendall` and synthetic series with known trends;
   no climate conclusions are drawn from the sample fixture.
+
+## `GET /api/v1/analysis/climate`
+
+Fetches monthly NASA POWER data (one upstream request, same client and
+validation as `/api/v1/climate/monthly`) and runs the analysis above.
+
+| Query param | Required | Rules |
+|-------------|----------|-------|
+| `latitude` | yes | -90 to 90 |
+| `longitude` | yes | -180 to 180 |
+| `start_year` | no (1981) | >= 1981, <= `end_year` |
+| `end_year` | no (last complete year) | <= previous calendar year |
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/analysis/climate?latitude=7.3&longitude=81.8&start_year=1981&end_year=2025"
+```
+
+Response fields:
+
+| Field | Content |
+|-------|---------|
+| `location`, `dataset`, `period` | Same models as the monthly endpoint (grid cell, elevation, sources, time standard, fill value) |
+| `methodology` | Settings (alpha, minimum observations, Hamed-Rao lag) and limitations |
+| `temperature`, `precipitation` | Each has `annual` (series + `excluded_years`), an annual trend (`annual_trend` / `annual_total_trend`), `seasonal_trend`, `month_wise_trends` (exploratory), and `anomalies` (with `baseline`, normals and anomalies) |
+
+Notes:
+
+- Insufficient data is not an error: the affected results return
+  `status: "insufficient_data"` (for example a period shorter than 10 years).
+- The analysis uses only the years requested. The 1991-2020 reference period
+  therefore needs the requested period to cover it (at least 24 valid values
+  per calendar month inside 1991-2020); otherwise `baseline.kind` is
+  `custom_reference` and says so.
+- Errors are the same as the monthly endpoint: 422 invalid input, 502 NASA
+  failure or unexpected response, 504 timeout.

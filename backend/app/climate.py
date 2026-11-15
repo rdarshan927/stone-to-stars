@@ -29,14 +29,8 @@ def last_complete_year() -> int:
     return date.today().year - 1
 
 
-@router.get("/monthly", response_model=MonthlyClimateResponse)
-async def get_monthly_climate(
-    client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
-    latitude: Annotated[float, Query(ge=-90, le=90)],
-    longitude: Annotated[float, Query(ge=-180, le=180)],
-    start_year: Annotated[int, Query(ge=MIN_YEAR)] = MIN_YEAR,
-    end_year: Annotated[int | None, Query(ge=MIN_YEAR)] = None,
-) -> MonthlyClimateResponse:
+def resolve_period(start_year: int, end_year: int | None) -> tuple[int, int]:
+    """Validate the requested years; default end_year to the last complete year."""
     max_year = last_complete_year()
     if end_year is None:
         end_year = max_year
@@ -48,9 +42,31 @@ async def get_monthly_climate(
         )
     if start_year > end_year:
         raise HTTPException(422, "start_year must not be after end_year.")
+    return start_year, end_year
 
+
+async def load_monthly(
+    client: httpx.AsyncClient,
+    latitude: float,
+    longitude: float,
+    start_year: int,
+    end_year: int,
+) -> MonthlyClimateResponse:
+    """Fetch and parse NASA POWER data, mapping upstream failures to HTTP errors."""
     try:
         raw = await fetch_monthly(client, latitude, longitude, start_year, end_year)
         return parse_monthly_response(raw, latitude, longitude, start_year, end_year)
     except NasaPowerError as exc:
         raise HTTPException(exc.status_code, exc.message) from exc
+
+
+@router.get("/monthly", response_model=MonthlyClimateResponse)
+async def get_monthly_climate(
+    client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
+    latitude: Annotated[float, Query(ge=-90, le=90)],
+    longitude: Annotated[float, Query(ge=-180, le=180)],
+    start_year: Annotated[int, Query(ge=MIN_YEAR)] = MIN_YEAR,
+    end_year: Annotated[int | None, Query(ge=MIN_YEAR)] = None,
+) -> MonthlyClimateResponse:
+    start_year, end_year = resolve_period(start_year, end_year)
+    return await load_monthly(client, latitude, longitude, start_year, end_year)
